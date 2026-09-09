@@ -4,11 +4,15 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Field, SaveForm, value } from "@/components/ui";
+import { ThemeToggle } from "@/components/theme-toggle";
 export default function Login() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   return (
     <main className="login-page">
+      <div className="login-theme-corner">
+        <ThemeToggle compact />
+      </div>
       <section className="login-story">
         <div className="brand">
           <span className="brand-mark">

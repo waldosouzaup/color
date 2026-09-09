@@ -102,3 +102,22 @@ describe("pesagem decimal", () => {
     expect(sumMass("0.1", ["0.2"])).toBe("0.3000");
   });
 });
+
+describe("bússola cromática (geometria e mapeamento)", () => {
+  it("mapeia as 8 direções fundamentais com ângulos precisos de 0 a 360", async () => {
+    const { ruleAngles, cardinalTones } = await import("../components/compass");
+    expect(Object.keys(ruleAngles)).toHaveLength(8);
+    expect(ruleAngles["YELLOW:REDISH"]).toBe(22.5);
+    expect(ruleAngles["BLUE:REDISH"]).toBe(67.5);
+    expect(ruleAngles["BLUE:GREENISH"]).toBe(112.5);
+    expect(ruleAngles["RED:YELLOWISH"]).toBe(157.5);
+    expect(ruleAngles["RED:BLUISH"]).toBe(202.5);
+    expect(ruleAngles["GREEN:BLUISH"]).toBe(247.5);
+    expect(ruleAngles["GREEN:YELLOWISH"]).toBe(292.5);
+    expect(ruleAngles["YELLOW:GREENISH"]).toBe(337.5);
+
+    expect(cardinalTones).toHaveLength(4);
+    expect(cardinalTones.map((c) => c.tone)).toEqual(["YELLOW", "BLUE", "RED", "GREEN"]);
+  });
+});
+

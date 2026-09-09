@@ -25,6 +25,7 @@ import {
   ChevronRight,
   LoaderCircle,
   CircleHelp,
+  Maximize2,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import type { Workspace, Adjustment } from "@/lib/client-types";
@@ -36,6 +37,9 @@ import {
 } from "@/lib/client-api";
 import { Heading, Badge, Empty, Alert, Dialog } from "@/components/ui";
 import { Compass } from "@/components/compass";
+import { CompassModal } from "@/components/compass-modal";
+import { CompassDiagnosis, CompassShelf } from "@/components/compass-panels";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { FormulaForm, FormulaTable } from "./formula-form";
 import { SessionView } from "./session";
 import { AccountView } from "./account";
@@ -45,7 +49,8 @@ import {
   RulesView,
   SettingsView,
 } from "./catalogs";
-import { pigmentLabels } from "@/domain/colorimetry/tones";
+import { HelpView } from "./help";
+import { toneLabels, directionLabels } from "@/domain/colorimetry/tones";
 const nav = [
   { href: "/", label: "Visão geral", icon: LayoutDashboard },
   { href: "/sessions", label: "Meus ajustes", icon: FlaskConical },
@@ -54,6 +59,7 @@ const nav = [
   { href: "/formulas", label: "Fórmulas", icon: Files },
   { href: "/pigments", label: "Biblioteca de pigmentos", icon: BookOpen },
   { href: "/history", label: "Histórico de ajustes", icon: History },
+  { href: "/help", label: "Ajuda", icon: CircleHelp },
 ];
 const adminNav = [
   { href: "/rules", label: "Regras do método", icon: SlidersHorizontal },
@@ -139,7 +145,7 @@ function Dashboard({ workspace }: { workspace: Workspace }) {
         </div>
         <div className="hero-compass">
           <Compass
-            compact
+            size="sm"
             rules={workspace.rules}
             onSelect={() => router.push("/compass")}
           />
@@ -314,82 +320,209 @@ function CompassView({ workspace }: { workspace: Workspace }) {
       (r) => r.mainTone === "YELLOW" && r.direction === "REDISH",
     ) || workspace.rules[0],
   );
+  const [viewMode, setViewMode] = useState<"ANGLE" | "FRONT">("ANGLE");
   const [choose, setChoose] = useState(false);
+  const [showOpposition, setShowOpposition] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <>
-      <Heading
-        eyebrow="CONSULTA DO MÉTODO"
-        title="Bússola cromática"
-        description="Selecione uma direção para conhecer a correção de matiz indicada."
-      />
+      <div className="compass-header-bar">
+        <Heading
+          eyebrow="MÉTODO DO MESTRE DA COLORIMETRIA"
+          title="Bússola Cromática de Alta Precisão"
+          description="Instrumento de diagnóstico visual para identificação do tom principal, direção do subtom e pigmentos de corte da Fórmula Secreta Semida."
+        />
+        <div className="compass-header-actions">
+          <button
+            type="button"
+            className="button primary sm"
+            onClick={() => setExpanded(true)}
+            title="Abrir o mostrador ampliado em tela cheia"
+          >
+            <Maximize2 size={16} />
+            Ampliar bússola
+          </button>
+          <button
+            type="button"
+            className="button secondary sm"
+            onClick={() => setShowOpposition(true)}
+            title="Conhecer o Princípio de Oposição e riscos de contaminação direta"
+          >
+            <CircleHelp size={16} />
+            Regras de Oposição & Contaminação
+          </button>
+        </div>
+      </div>
+
       <div className="compass-layout">
         <section className="panel compass-panel">
+          <div className="compass-panel-header">
+            <span className="panel-subtitle">MOSTRADOR DINÂMICO 360°</span>
+            <div className="panel-header-right">
+              <span className="panel-hint">Arraste o dial ou clique nas esferas</span>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Ampliar bússola"
+                title="Ampliar bússola"
+                onClick={() => setExpanded(true)}
+              >
+                <Maximize2 size={17} />
+              </button>
+            </div>
+          </div>
+
           <Compass
             rules={workspace.rules}
             selected={selected?.id}
             onSelect={setSelected}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
           />
-          <p>
-            As cores da interface são ilustrativas. Avalie a chapa aplicada.
-          </p>
+
+          <div className="compass-method-callout">
+            {viewMode === "ANGLE" ? (
+              <div className="callout-box angle-mode">
+                <span className="callout-tag">1º PASSO · MÉTODO PRIMEIRO ÂNGULO</span>
+                <strong>Avaliação obrigatória do Flop (Ângulo na chapa):</strong>
+                <p>
+                  A correção sempre começa pelo ângulo. Os pigmentos sólidos definem o ângulo da cor.
+                  Se o ângulo fecha na chapa, a frente tende a fechar sozinha.
+                </p>
+              </div>
+            ) : (
+              <div className="callout-box front-mode">
+                <span className="callout-tag">2º PASSO · AVALIAÇÃO DA FRENTE</span>
+                <strong>Avaliação da Frente (Face sob luz normal):</strong>
+                <p>
+                  Partículas de efeito (alumínio e pérola) influenciam a frente. Apenas reavalie a frente com nova chapa
+                  após o ângulo estar rigorosamente fechado.
+                </p>
+              </div>
+            )}
+          </div>
         </section>
+
         <section className="panel compass-result">
           {selected && (
             <>
-              <span className="eyebrow">DIREÇÃO SELECIONADA</span>
-              <h2>{selected.diagnosisLabel}</h2>
+              <div className="result-header">
+                <span className="eyebrow">DIAGNÓSTICO DA CHAPA</span>
+                <h2>{selected.diagnosisLabel}</h2>
+                <span className="tone-quadrant-badge">
+                  Tom {toneLabels[selected.mainTone]} · Direção {directionLabels[selected.direction]}
+                </span>
+              </div>
+
               <hr />
-              <span className="eyebrow">CORREÇÃO INDICADA</span>
-              {selected.outputs.map((o, i) => (
-                <div key={o.pigmentCharacteristic}>
-                  {i > 0 && (
-                    <small className="output-join">
-                      {o.role === "ALTERNATIVE"
-                        ? "OU"
-                        : o.role === "SUPPORT"
-                          ? "SUPORTE OPCIONAL"
-                          : "+"}
-                    </small>
-                  )}
-                  <h3>
-                    <span
-                      className={`pigment-dot ${o.pigmentCharacteristic.toLowerCase()}`}
-                    />
-                    {pigmentLabels[o.pigmentCharacteristic]}
-                  </h3>
-                </div>
-              ))}
-              <p>{selected.notes}</p>
-              <small>
-                {selected.source} · Versão {selected.version}
-              </small>
-              <button
-                className="button primary"
-                disabled={!selected.active}
-                onClick={() => setChoose(true)}
-              >
-                Usar neste ajuste
-                <ArrowRight size={17} />
-              </button>
-              {!selected.active && (
-                <Alert error>Regra desativada pela oficina.</Alert>
-              )}
+
+              <CompassDiagnosis rule={selected} />
+
+              <div className="result-footer">
+                <small className="result-source-meta">
+                  {selected.source} · Regra v{selected.version}
+                </small>
+
+                <button
+                  className="button primary w-full"
+                  disabled={!selected.active}
+                  onClick={() => setChoose(true)}
+                >
+                  Usar neste ajuste
+                  <ArrowRight size={17} />
+                </button>
+
+                {!selected.active && (
+                  <Alert error>Regra desativada pela oficina.</Alert>
+                )}
+              </div>
             </>
           )}
         </section>
       </div>
-      <div className="compass-options">
-        {workspace.rules.map((r) => (
-          <button
-            key={r.id}
-            className={`choice ${r.id === selected?.id ? "selected" : ""}`}
-            onClick={() => setSelected(r)}
-          >
-            <span className={`tone-dot ${r.mainTone.toLowerCase()}`} />
-            {r.diagnosisLabel}
-          </button>
-        ))}
-      </div>
+
+      <CompassShelf
+        rules={workspace.rules}
+        selected={selected}
+        onSelect={setSelected}
+      />
+
+      {showOpposition && (
+        <Dialog
+          title="Princípio de Oposição & Riscos de Contaminação"
+          close={() => setShowOpposition(false)}
+        >
+          <div className="stack opposition-modal-content">
+            <div className="opposition-banner">
+              <span className="banner-alert-tag">REGRA FUNDAMENTAL DO MÉTODO SEMIDA</span>
+              <p>
+                A cor automotiva exige neutralização de subtons por transição óptica, nunca pela mistura
+                bruta de cores primárias opostas.
+              </p>
+            </div>
+
+            <div className="opposition-rules-grid">
+              <div className="opposition-item">
+                <div className="opposition-header">
+                  <span className="symbol-prohibit">❌</span>
+                  <strong>Amarelo vs Azul (Direto)</strong>
+                </div>
+                <p>
+                  <strong>NUNCA adicione Azul diretamente no Amarelo (ou vice-versa).</strong>
+                  O encontro direto de amarelo e azul produz verde indesejado e uma lama acinzentada que destrói a
+                  luminosidade da chapa. O corte correto usa azul esverdeado, violeta ou amarelo limão conforme o subtom.
+                </p>
+              </div>
+
+              <div className="opposition-item">
+                <div className="opposition-header">
+                  <span className="symbol-prohibit">❌</span>
+                  <strong>Verde vs Vermelho (Direto)</strong>
+                </div>
+                <p>
+                  <strong>NUNCA adicione Vermelho diretamente no Verde (ou vice-versa).</strong>
+                  A mistura direta sem direção transforma a tinta em marrom escuro opaco e sem reflexo metálico. O corte
+                  deve ser feito com Violeta Roxo e Óxido para preservar a pureza.
+                </p>
+              </div>
+            </div>
+
+            <div className="opposition-summary">
+              <strong>Como funciona a Fórmula Secreta:</strong>
+              <p>
+                Identifique primeiro o tom principal (Amarelo, Azul, Verde ou Vermelho), em seguida verifique a direção do
+                subtom no ângulo (flop). O pigmento indicado na bússola cortará exclusivamente o desvio, conservando a
+                matriz original limpa.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="button primary"
+              onClick={() => setShowOpposition(false)}
+            >
+              Compreendi as regras
+            </button>
+          </div>
+        </Dialog>
+      )}
+
+      {expanded && (
+        <CompassModal
+          rules={workspace.rules}
+          selected={selected}
+          onSelect={setSelected}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          close={() => setExpanded(false)}
+          onUse={() => {
+            setExpanded(false);
+            setChoose(true);
+          }}
+        />
+      )}
+
       {choose && selected && (
         <Dialog
           title="Escolha o ajuste em andamento"
@@ -823,6 +956,7 @@ export function Workbench() {
     content = <AccountView workspace={workspace} />;
   else if (section === "pigments")
     content = <PigmentsView workspace={workspace} refresh={refresh} />;
+  else if (section === "help") content = <HelpView />;
   else if (admin && section === "rules")
     content = <RulesView workspace={workspace} refresh={refresh} />;
   else if (admin && section === "coefficients")
@@ -972,13 +1106,15 @@ export function Workbench() {
             <strong>{title}</strong>
           </div>
           <div className="topbar-end">
+            <ThemeToggle compact />
             <span>
               <Clock3 size={14} /> Registro em tempo real
             </span>
             <Link
-              href="/compass"
+              href="/help"
               className="icon-button"
-              aria-label="Consultar o método"
+              aria-label="Manual do Usuário e Central de Ajuda"
+              title="Manual do Usuário e Central de Ajuda"
             >
               <CircleHelp size={19} />
             </Link>

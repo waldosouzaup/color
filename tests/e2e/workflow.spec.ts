@@ -185,6 +185,28 @@ test("responsividade e navegação nas quatro larguras", async ({ page }) => {
       );
       expect(overflow, `${route} em ${width}px`).toBe(false);
     }
+    // Modal ampliado da bússola: é o único overlay que passa de 95vw
+    await page.goto("/compass");
+    await page.getByRole("button", { name: "Ampliar bússola" }).first().click();
+    const modal = page.getByRole("dialog");
+    await expect(modal).toBeVisible();
+    await expect(modal.locator(".compass-container.xl")).toBeVisible();
+    const modalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 1,
+    );
+    expect(modalOverflow, `modal da bússola em ${width}px`).toBe(false);
+
+    // A direção escolhida no mostrador ampliado continua valendo na página
+    await modal
+      .locator(".compass-container.xl")
+      .getByLabel("Verde azulado")
+      .click();
+    await page.keyboard.press("Escape");
+    await expect(modal).not.toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Verde azulado" }),
+    ).toBeVisible();
+
     await page.goto("/");
     await expect(
       page.getByRole("heading", { name: "Visão geral" }),

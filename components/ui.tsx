@@ -136,20 +136,33 @@ export function Dialog({
   title,
   close,
   children,
+  size = "md",
 }: {
   title: string;
   close: () => void;
   children: ReactNode;
+  size?: "md" | "wide";
 }) {
   const id = useId();
   return (
     <dialog
-      className="modal"
+      className={`modal ${size === "wide" ? "wide" : ""}`}
       aria-labelledby={id}
       ref={(node) => {
         if (node && !node.open) node.showModal();
       }}
       onCancel={close}
+      onClick={(e) => {
+        // O <dialog> ocupa toda a viewport para o backdrop, entao um clique fora
+        // da caixa chega aqui com coordenadas fora do proprio retangulo.
+        const box = e.currentTarget.getBoundingClientRect();
+        const outside =
+          e.clientX < box.left ||
+          e.clientX > box.right ||
+          e.clientY < box.top ||
+          e.clientY > box.bottom;
+        if (outside) close();
+      }}
     >
       <div className="modal-header">
         <h2 id={id}>{title}</h2>

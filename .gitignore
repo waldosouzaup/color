@@ -14,5 +14,7 @@ playwright-report/
 
 # Materiais locais de referência; não integram a distribuição da aplicação.
 /*.pdf
+!/MANUAL_DO_USUARIO.pdf
 /*.docx
 /*.jpeg
+

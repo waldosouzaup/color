@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual do Usuário — Mestre da Colorimetria</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 9pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.6;
+      font-size: 10pt;
+    }
+
+    /* Utilitários de Quebra de Página */
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .avoid-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Capa Elegante */
+    .cover-page {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 40px 20px;
+      text-align: center;
+      background: linear-gradient(145deg, #090e0c 0%, #16221c 50%, #0d1410 100%);
+      color: #ffffff;
+      border-radius: 12px;
+    }
+
+    .cover-top {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid #10b981;
+      color: #10b981;
+      font-size: 9pt;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .cover-title {
+      font-size: 34pt;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-top: 15px;
+      color: #f8fafc;
+    }
+
+    .cover-subtitle {
+      font-size: 14pt;
+      font-weight: 400;
+      color: #94a3b8;
+      max-width: 500px;
+      margin-top: 10px;
+    }
+
+    .cover-wheel-art {
+      margin: 40px auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .cover-sphere {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset -3px -3px 8px rgba(0,0,0,0.6), inset 3px 3px 6px rgba(255,255,255,0.7);
+    }
+    .cover-sphere.yellow { background: radial-gradient(circle at 35% 30%, #fef08a 0%, #facc15 50%, #854d0e 100%); }
+    .cover-sphere.blue { background: radial-gradient(circle at 35% 30%, #93c5fd 0%, #3b82f6 50%, #1e3a8a 100%); }
+    .cover-sphere.green { background: radial-gradient(circle at 35% 30%, #86efac 0%, #10b981 50%, #064e3b 100%); }
+    .cover-sphere.red { background: radial-gradient(circle at 35% 30%, #fca5a5 0%, #ef4444 50%, #7f1d1d 100%); }
+
+    .cover-bottom {
+      border-top: 1px solid rgba(255,255,255,0.15);
+      padding-top: 25px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 9pt;
+      color: #94a3b8;
+    }
+
+    /* Cabeçalhos e Seções */
+    h1 {
+      font-size: 18pt;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      margin-top: 25px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 18px;
+      margin-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 11pt;
+      font-weight: 650;
+      color: #334155;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      color: #334155;
+    }
+
+    /* Banners e Caixas de Destaque */
+    .golden-rule {
+      background: linear-gradient(135deg, #18201c 0%, #101613 100%);
+      color: #ffffff;
+      border-left: 5px solid #10b981;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 18px 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .golden-rule strong {
+      display: block;
+      color: #10b981;
+      font-size: 11pt;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    .golden-rule p {
+      color: #e2e8f0;
+      font-size: 10.5pt;
+      margin: 0;
+    }
+
+    .callout-alert {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-left: 4px solid #ef4444;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 15px 0;
+    }
+
+    .callout-alert strong {
+      color: #dc2626;
+      font-size: 10.5pt;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .callout-alert p {
+      color: #7f1d1d;
+      margin: 0;
+      font-size: 9.5pt;
+    }
+
+    /* Fluxograma Visual */
+    .workflow-timeline {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin: 20px 0;
+    }
+
+    .workflow-step {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .workflow-step .step-num {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      border-radius: 50%;
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 8pt;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .workflow-step .step-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      display: block;
+    }
+
+    /* Tabelas Formatadas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 9pt;
+    }
+
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 8pt;
+      letter-spacing: 0.5px;
+      padding: 10px 12px;
+      text-align: left;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* Cartões e Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 15px 0;
+    }
+
+    .info-card {
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .info-card h4 {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-card p {
+      font-size: 9pt;
+      color: #475569;
+      margin: 0;
+    }
+
+    /* Lista com Marcadores Personalizados */
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 14px;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: 700;
+    }
+    .badge-pill.yellow { background: #fef08a; color: #854d0e; }
+    .badge-pill.blue { background: #dbeafe; color: #1e40af; }
+    .badge-pill.green { background: #dcfce7; color: #166534; }
+    .badge-pill.red { background: #fee2e2; color: #991b1b; }
+    .badge-pill.violet { background: #f3e8ff; color: #6b21a8; }
+  </style>
+</head>
+<body>
+
+  <!-- CAPA -->
+  <div class="cover-page">
+    <div class="cover-top">
+      <span class="cover-badge">Metodologia Semida</span>
+      <h1 class="cover-title">MESTRE DA<br>COLORIMETRIA</h1>
+      <p class="cover-subtitle">Manual Operacional de Ajuste e Igualação de Cores Automotivas pelo Método Primeiro Ângulo</p>
+    </div>
+
+    <div class="cover-wheel-art">
+      <div class="cover-sphere yellow" title="Amarelo"></div>
+      <div class="cover-sphere blue" title="Azul"></div>
+      <div class="cover-sphere green" title="Verde"></div>
+      <div class="cover-sphere red" title="Vermelho"></div>
+    </div>
+
+    <div class="cover-bottom">
+      <span>Versão do Sistema: 2.0 (Studio Dark & Light)</span>
+      <span>Documento de Treinamento e Operação</span>
+    </div>
+  </div>
+
+  <!-- PÁGINA 2: O PRINCÍPIO FUNDAMENTAL E FLUXO -->
+  <div class="page-break"></div>
+
+  <h1>1. O Princípio Fundamental: Método Primeiro Ângulo</h1>
+  
+  <p>O <strong>Método do Mestre da Colorimetria</strong> substitui a tentativa e erro por raciocínio visual estruturado e repetível. A igualação correta depende da compreensão de como as camadas ópticas da tinta se comportam na chapa aplicada.</p>
+
+  <div class="golden-rule avoid-break">
+    <strong>A Regra de Ouro do Método</strong>
+    <p>"A correção sempre começa pelo ÂNGULO (Flop). Nunca pela FRENTE (Face)."</p>
+  </div>
+
+  <div class="card-grid avoid-break">
+    <div class="info-card">
+      <h4>📐 Vista de Ângulo (Flop · 45° e 110°)</h4>
+      <p>Governada exclusivamente pelos <strong>pigmentos sólidos</strong>. Determina o matiz de fundo da fórmula. Se o ângulo fecha na chapa, a frente tende a fechar naturalmente por reflexão de luz.</p>
+    </div>
+    <div class="info-card">
+      <h4>👁️ Vista de Frente (Face · 90°)</h4>
+      <p>Governada predominantemente pela orientação e tamanho das <strong>partículas de efeito (alumínio e pérola)</strong>. Só deve ser reavaliada e ajustada após o ângulo estar perfeitamente correto.</p>
+    </div>
+  </div>
+
+  <h2>Fluxo Operacional Padrão da Oficina</h2>
+  <div class="workflow-timeline avoid-break">
+    <div class="workflow-step">
+      <span class="step-num">1</span>
+      <span class="step-title">Fórmula de Origem</span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">2</span>
+      <span class="step-title">Chapa 01</span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">3</span>
+      <span class="step-title">Bússola (Ângulo)</span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">4</span>
+      <span class="step-title">Adição na Balança</span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">5</span>
+      <span class="step-title">Chapa 02 (Frente)</span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">6</span>
+      <span class="step-title">Aprovação & Banco</span>
+    </div>
+  </div>
+
+  <!-- PÁGINA 3: BÚSSOLA CROMÁTICA & FÓRMULA SECRETA -->
+  <div class="page-break"></div>
+
+  <h1>2. A Bússola Cromática & Fórmula Secreta Semida</h1>
+
+  <p>Toda cor automotiva pertence obrigatoriamente a um dos <strong>4 Tons Fundamentais</strong>. Não existem exceções. Ao diagnosticar uma chapa de teste em ângulo rasante, o profissional precisa responder apenas a duas perguntas:</p>
+
+  <ol>
+    <li><strong>Qual é o Tom Principal?</strong> (Amarelo, Azul, Verde ou Vermelho)</li>
+    <li><strong>Para qual Direção o subtom está puxando?</strong> (Avermelhado, Esverdeado, Amarelado ou Azulado)</li>
+  </ol>
+
+  <h2>Matriz Completa de Corte e Neutralização</h2>
+  <table class="avoid-break">
+    <thead>
+      <tr>
+        <th>Tom Principal</th>
+        <th>Direção do Subtom</th>
+        <th>Pigmento de Corte Indicado</th>
+        <th>Relação / Função Operacional</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge-pill yellow">AMARELO</span></td>
+        <td>Avermelhado (Laranja)</td>
+        <td><strong>Azul Esverdeado</strong></td>
+        <td>Corte Principal (elimina o calor sem acinzentar)</td>
+      </tr>
+      <tr>
+        <td><span class="badge-pill yellow">AMARELO</span></td>
+        <td>Esverdeado (Limão)</td>
+        <td><strong>Azul Avermelhado</strong> ou <strong>Combo de Roxo</strong></td>
+        <td>Escolher uma alternativa (quebra o reflexo frio)</td>
+      </tr>
+      <tr>
+        <td><span class="badge-pill blue">AZUL</span></td>
+        <td>Avermelhado (Violeta)</td>
+        <td><strong>Amarelo Limão</strong></td>
+        <td>Corte Principal (clareia e centraliza o azul puro)</td>
+      </tr>
+      <tr>
+        <td><span class="badge-pill blue">AZUL</span></td>
+        <td>Esverdeado (Ciano)</td>
+        <td><strong>Óxido Vermelho</strong> ou <strong>Violeta</strong></td>
+        <td>Escolher uma alternativa (quebra a nuance verde)</td>
+      </tr>
+      <tr>
+        <td><span class="badge-pill green">VERDE</span></td>
+        <td>Amarelado</td>
+        <td><strong>Violeta Roxo</strong> (+ suporte se necessário)</td>
+        <td>Corte Principal (devolve o verde puro e vívido)</td>
+      </tr>
+      <tr>
+        <td><span class="badge-pill green">VERDE</span></td>
+        <td>Azulado</td>
+        <td><strong>Violeta Roxo + Óxido Vermelho</strong></td>
+        <td><strong>Combinação Obrigatória</strong> (ambos necessários)</td>
+      </tr>
+      <tr>
+        <td><span class="badge-pill red">VERMELHO</span></td>
+        <td>Azulado (Framboesa)</td>
+        <td><strong>Amarelo Limão</strong></td>
+        <td>Corte Principal (neutraliza a frieza do magenta)</td>
+      </tr>
+      <tr>
+        <td><span class="badge-pill red">VERMELHO</span></td>
+        <td>Amarelado (Coral)</td>
+        <td><strong>Azul Avermelhado</strong> ou <strong>Violeta</strong></td>
+        <td>Escolher uma alternativa (esfria para vermelho puro)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout-alert avoid-break">
+    <strong>⚠️ ALERTA DO MANUAL — REGRAS DE OPOSIÇÃO E CONTAMINAÇÃO</strong>
+    <p><strong>NUNCA adicione azul direto em amarelo nem amarelo em azul:</strong> o encontro direto cria verde e lama acinzentada.<br>
+    <strong>NUNCA adicione vermelho direto em verde nem verde em vermelho:</strong> anula o brilho e gera tom terroso sujo.<br>
+    O ajuste automotivo profissional exige sempre os pigmentos fracionados de corte da tabela acima!</p>
+  </div>
+
+  <!-- PÁGINA 4: PASSO A PASSO NA PRÁTICA -->
+  <div class="page-break"></div>
+
+  <h1>3. Guia Operacional Passo a Passo</h1>
+
+  <h2>Passo 1: Criar um Novo Ajuste (/new)</h2>
+  <ul>
+    <li>Clique em <strong>"Novo ajuste"</strong> e preencha a identificação do carro (Montadora, Modelo, Ano e Código da Cor).</li>
+    <li>Adicione cada base/pigmento e selecione o modo de pesagem:
+      <ul>
+        <li><strong>Individual:</strong> você zera a tara da balança a cada componente colocado.</li>
+        <li><strong>Acumulado:</strong> a balança soma progressivamente sem zerar.</li>
+      </ul>
+    </li>
+    <li>Selecione o tipo de tinta (Metálico, Poliéster Liso, Pérola) e confira a massa total calculada antes de salvar.</li>
+  </ul>
+
+  <h2>Passo 2: Preparação e Primeira Chapa</h2>
+  <ul>
+    <li>Pese e misture os componentes com rigor milimétrico.</li>
+    <li>Aplique na chapa metálica de teste na mesma pressão e distância que serão usadas no veículo.</li>
+    <li>No sistema, acesse <strong>"Chapas de teste"</strong> &gt; <strong>"+ Nova chapa"</strong> e registre:
+      <ul>
+        <li>Aplicação de verniz (Com ou Sem verniz).</li>
+        <li>Condições ambientais (temperatura, bico da pistola e pressão).</li>
+        <li>Anexe a fotografia da chapa para o histórico de auditoria.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Passo 3: Diagnóstico com a Bússola Cromática (/compass)</h2>
+  <ul>
+    <li>Sob luz de cabine calibrada (5000K–6500K) ou sol direto, observe a chapa em <strong>ângulo de 45° e 110°</strong> comparando com a peça do veículo.</li>
+    <li>Selecione o Tom e a Direção. O sistema exibirá a <strong>miniesfera 3D do pigmento de corte</strong> e a dose indicada.</li>
+  </ul>
+
+  <h2>Passo 4: Registro da Correção e Balança</h2>
+  <ul>
+    <li>Indique a intensidade da diferença (<strong>Leve</strong>, <strong>Média</strong> ou <strong>Forte</strong>) e a iluminação observada.</li>
+    <li>Adicione a quantidade de pigmento na balança de precisão (com resolução de 0.01 g).</li>
+    <li>Clique em <strong>"Registrar adição"</strong>. O sistema atualiza o peso acumulado atomicamente.</li>
+  </ul>
+
+  <h2>Passo 5: Segunda Chapa e Avaliação da Frente</h2>
+  <ul>
+    <li>Homogeneize a tinta e aplique a <strong>Chapa 02</strong>.</li>
+    <li>Reavalie o ângulo: se o ângulo fechou com a peça original, observe a chapa perpendicularmente (Frente a 90°) para conferir orientação de alumínio e pérola.</li>
+  </ul>
+
+  <h2>Passo 6: Aprovação Final e Banco de Cores (/bank)</h2>
+  <ul>
+    <li>Com o ângulo e a frente aprovados, clique em <strong>"Aprovar fórmula"</strong>.</li>
+    <li>O sistema gera um snapshot imutável da <strong>Fórmula Final Ajustada</strong> (somando componentes iniciais + correções).</li>
+    <li>A cor é catalogada no <strong>Banco de Cores da Oficina</strong> para reutilização instantânea em futuros serviços.</li>
+  </ul>
+
+  <div class="golden-rule avoid-break" style="margin-top: 25px;">
+    <strong>Compromisso de Qualidade</strong>
+    <p>Com o Método do Mestre da Colorimetria, cada chapa realizada enriquece o acervo técnico da sua oficina, reduzindo desperdício de tinta e garantindo fidelidade absoluta de tonalidade.</p>
+  </div>
+
+</body>
+</html>
