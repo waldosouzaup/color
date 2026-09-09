@@ -54,7 +54,7 @@ APP_DOMAIN=seu.dominio.com docker compose -f deploy/compose.yml up -d --build
 APP_DOMAIN=seu.dominio.com docker compose -f deploy/compose.yml ps
 ```
 
-APP_DOMAIN precisa coincidir com BETTER_AUTH_URL. O container da aplicação tem filesystem somente leitura, temporários limitados e capabilities removidas. Certificados HTTPS persistem nos volumes do Caddy. O Docker não está instalado neste workspace; esta opção ainda precisa ser construída e iniciada no servidor escolhido.
+APP_DOMAIN precisa coincidir com BETTER_AUTH_URL. O container da aplicação tem filesystem somente leitura, temporários limitados e capabilities removidas. Certificados HTTPS persistem nos volumes do Caddy. O CI constrói a imagem e testa conexão ao banco, login e API autenticada nessas condições com dados efêmeros. O Compose e o HTTPS ainda precisam ser iniciados no servidor escolhido.
 
 ## Hospedagem Vercel
 
@@ -82,3 +82,5 @@ O carregamento da oficina ainda é feito em lote. Paginação e busca no servido
 ## Estado da entrega
 
 Código, migração, arquivos de implantação e testes foram preparados. A publicação efetiva depende do projeto Supabase, conexões reais, hospedagem e domínio. Testes com PostgreSQL local e build de produção não representam conexão ao Supabase remoto nem publicação externa.
+
+Antes da publicação, preencha a senha PostgreSQL nas duas conexões e a origem pública em BETTER_AUTH_URL. Preencha também os quatro campos PRODUCTION_ORGANIZATION_NAME, PRODUCTION_ADMIN_NAME, PRODUCTION_ADMIN_EMAIL e PRODUCTION_ADMIN_PASSWORD para provisionar o primeiro acesso. As chaves publishable/secret e o endpoint JWKS do Supabase não substituem a senha PostgreSQL.

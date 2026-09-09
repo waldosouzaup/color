@@ -45,6 +45,10 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e:production
+      - name: Construir imagem de produção
+        run: docker build --tag mestre-colorimetria:ci .
+      - name: Verificar aplicação no container
+        run: bash scripts/test-container.sh
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

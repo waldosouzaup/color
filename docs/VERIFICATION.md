@@ -33,4 +33,8 @@ O executável pnpm foi usado a partir de uma instalação temporária, pois não
 
 Capturas e relatórios de testes são gerados em `test-results/` e `playwright-report/`, ambos ignorados no versionamento. Os registros do cenário de navegador são identificados como DADO DEMONSTRATIVO. Fixtures de integração pertencem a organizações efêmeras removidas ao final.
 
-O preflight de produção identifica corretamente as conexões ainda não preenchidas em `.env.production.local`. Não houve conexão ao Supabase remoto ou deploy externo. Docker não está instalado neste workspace, portanto a imagem e o Compose não foram executados; o artefato Node standalone foi testado. O workflow de CI foi preparado, mas não executado no GitHub. O procedimento e os dados necessários estão em [PRODUCTION_SUPABASE.md](PRODUCTION_SUPABASE.md).
+O preflight de produção identifica corretamente as conexões ainda não preenchidas em `.env.production.local`. Não houve conexão ao Supabase remoto ou deploy externo. O [CI do primeiro commit](https://github.com/waldosouzaup/color/actions/runs/34390959347) passou no GitHub, incluindo migrações, lint, tipos, testes unitários, integração PostgreSQL, schema privado, bootstrap, build e cinco cenários de navegador.
+
+O workflow também passa a construir o Dockerfile e executar `scripts/test-container.sh`: container sem privilégios, filesystem somente leitura, conexão ao PostgreSQL efêmero, saúde, CSP, login e consulta da API autenticada. O teste não usa credenciais do Supabase real. Docker e Caddy precisam ser iniciados no servidor escolhido caso essa seja a hospedagem; uma execução de CI não publica o aplicativo.
+
+O procedimento e os dados necessários estão em [PRODUCTION_SUPABASE.md](PRODUCTION_SUPABASE.md).

@@ -12,3 +12,4 @@ playwright-report
 *.pdf
 *.docx
 uploads
+backups
