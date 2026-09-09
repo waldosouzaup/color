@@ -19,5 +19,13 @@ export async function register() {
     return;
   const { validateProductionEnvironment } =
     await import("./lib/production-env");
-  validateProductionEnvironment(process.env);
+  try {
+    validateProductionEnvironment(process.env);
+  } catch (error) {
+    console.error(
+      "❌ ERRO CRÍTICO DE CONFIGURAÇÃO EM PRODUÇÃO:\n",
+      error instanceof Error ? error.message : error,
+    );
+    throw error;
+  }
 }

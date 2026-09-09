@@ -24,11 +24,10 @@ function connection(env: Environment, key: string): URL {
     );
   if (url.searchParams.get("schema") !== "colorimetry")
     throw new Error(`${key}: use o schema privado colorimetry.`);
-  if (
-    url.searchParams.get("sslmode") !== "require" ||
-    url.searchParams.get("sslaccept") !== "strict"
-  )
-    throw new Error(`${key}: configure sslmode=require e sslaccept=strict.`);
+  if (url.searchParams.get("sslmode") !== "require")
+    throw new Error(`${key}: configure sslmode=require.`);
+  if (url.searchParams.get("sslaccept") === "accept_invalid_certs")
+    throw new Error(`${key}: sslaccept=accept_invalid_certs não é permitido.`);
   return url;
 }
 

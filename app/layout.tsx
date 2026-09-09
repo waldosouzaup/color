@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: "Mestre da Colorimetria",
   description:
     "Observe, corrija e registre. Colorimetria automotiva com rastreabilidade.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.ico",
+  },
 };
 
 const themeScript = `

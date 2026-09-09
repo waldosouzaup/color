@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
-  output: "standalone",
+  output: process.env.DOCKER_BUILD ? "standalone" : undefined,
   poweredByHeader: false,
   async headers() {
     return [

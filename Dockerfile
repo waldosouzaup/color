@@ -13,6 +13,7 @@ ENV DIRECT_URL=postgresql://build:build@127.0.0.1:5432/build?schema=colorimetry
 ENV BETTER_AUTH_SECRET=build-only-placeholder-with-no-production-access
 ENV BETTER_AUTH_URL=http://127.0.0.1:3000
 ENV APP_ENV=test
+ENV DOCKER_BUILD=1
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
