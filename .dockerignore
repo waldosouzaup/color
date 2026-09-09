@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.agents
+.codex
+.env*
+.local-postgres
+test-results
+playwright-report
+*.tsbuildinfo
+*.jpeg
+*.pdf
+*.docx
+uploads

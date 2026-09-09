@@ -1,0 +1,16 @@
+export const formulaInput = {
+  manufacturer: "Chevrolet",
+  model: "Veículo de teste",
+  year: "2024",
+  colorCode: "TEST-500",
+  description: "Cor de teste automatizado",
+  paintSystem: "Sistema de teste",
+  paintType: "METALLIC",
+  paintManufacturer: "TEST",
+  productLine: "TEST",
+  desiredMassG: "500",
+  source: "MANUAL_ENTRY",
+  weightMode: "INDIVIDUAL",
+  isDemo: true,
+  components: [{ code: "TEST-BASE", name: "Base de teste", weightG: "500" }],
+} as const;

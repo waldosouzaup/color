@@ -1,0 +1,55 @@
+name: Validar aplicação
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: color
+          POSTGRES_PASSWORD: test_only_password
+          POSTGRES_DB: color
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U color -d color"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://color:test_only_password@127.0.0.1:5433/color?schema=public
+      DIRECT_URL: postgresql://color:test_only_password@127.0.0.1:5433/color?schema=public
+      BETTER_AUTH_URL: http://127.0.0.1:3301
+      BETTER_AUTH_SECRET: ci-test-only-secret-never-use-in-production-123456
+      SEED_ADMIN_EMAIL: ci@example.test
+      SEED_ADMIN_PASSWORD: ci-test-only-password-123456
+      ALLOW_DEMO_SEED: "true"
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate && pnpm db:seed
+      - run: pnpm lint && pnpm typecheck && pnpm test
+      - run: pnpm test:db && pnpm test:supabase
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e:production
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: navegador-falhas
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 3

@@ -1,0 +1,416 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@index([lastRequest])
+}
+
+enum Role {
+  ADMIN
+  PROFESSIONAL
+}
+
+enum PrimaryTone {
+  YELLOW
+  BLUE
+  GREEN
+  RED
+}
+
+enum ToneDirection {
+  REDISH
+  GREENISH
+  YELLOWISH
+  BLUISH
+}
+
+enum PaintType {
+  SOLID
+  METALLIC
+  PEARL
+  OTHER
+}
+
+enum CalibrationStatus {
+  DRAFT
+  TESTING
+  VERIFIED
+  RETIRED
+}
+
+enum Severity {
+  LIGHT
+  MEDIUM
+  STRONG
+}
+
+enum AdjustmentStatus {
+  IN_PROGRESS
+  APPROVED
+  ARCHIVED
+}
+
+enum ObservationView {
+  ANGLE
+  FRONT
+}
+
+enum LightingCondition {
+  SUNLIGHT
+  LED
+  BOOTH
+  FLUORESCENT
+  INCANDESCENT
+  OTHER
+}
+
+enum FormulaSource {
+  OFFICIAL_SYSTEM
+  MANUAL_ENTRY
+  CUSTOM_FORMULA
+  SAVED_COLOR_BANK
+  OTHER
+}
+
+enum WeightMode {
+  INDIVIDUAL
+  CUMULATIVE
+}
+
+model Organization {
+  id            String   @id @default(cuid())
+  name          String
+  active        Boolean  @default(true)
+  precision     Int      @default(2)
+  officialLinks Json
+  users         User[]
+  createdAt     DateTime @default(now())
+}
+
+model User {
+  id             String       @id
+  name           String
+  email          String       @unique
+  emailVerified  Boolean      @default(false)
+  image          String?
+  role           Role         @default(PROFESSIONAL)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  sessions       Session[]
+  accounts       Account[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CorrectionRule {
+  id             String        @id
+  organizationId String?
+  mainTone       PrimaryTone
+  direction      ToneDirection
+  diagnosisLabel String
+  active         Boolean       @default(true)
+  version        Int           @default(1)
+  priority       Int           @default(100)
+  notes          String
+  source         String
+  outputs        Json
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId, mainTone, direction, version])
+}
+
+model Pigment {
+  id             String            @id @default(cuid())
+  organizationId String
+  manufacturer   String
+  productLine    String
+  code           String
+  name           String
+  systemType     String
+  family         String
+  direction      String?
+  characteristic String?
+  description    String            @default("")
+  active         Boolean           @default(true)
+  isDemo         Boolean           @default(false)
+  notes          String            @default("")
+  behaviors      PigmentBehavior[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([organizationId, manufacturer, productLine, code])
+  @@index([organizationId])
+}
+
+model PigmentBehavior {
+  id                String  @id @default(cuid())
+  pigmentId         String
+  pigment           Pigment @relation(fields: [pigmentId], references: [id])
+  view              String
+  hueCharacteristic String  @default("")
+  lightnessEffect   String  @default("")
+  cleanlinessEffect String  @default("")
+  particleEffect    String  @default("")
+  notes             String  @default("")
+  source            String
+  sourceReference   String
+}
+
+model Formula {
+  id                String              @id @default(cuid())
+  organizationId    String
+  userId            String
+  manufacturer      String
+  model             String
+  year              String
+  colorCode         String
+  description       String
+  paintSystem       String
+  paintType         PaintType
+  paintManufacturer String
+  productLine       String
+  desiredMassG      Decimal             @db.Decimal(16, 4)
+  source            FormulaSource
+  weightMode        WeightMode
+  notes             String              @default("")
+  isDemo            Boolean             @default(false)
+  archivedAt        DateTime?
+  components        FormulaComponent[]
+  sessions          AdjustmentSession[]
+  createdAt         DateTime            @default(now())
+
+  @@index([organizationId, colorCode])
+}
+
+model FormulaComponent {
+  id             String  @id @default(cuid())
+  formulaId      String
+  formula        Formula @relation(fields: [formulaId], references: [id])
+  pigmentId      String?
+  code           String
+  name           String
+  weightG        Decimal @db.Decimal(16, 4)
+  enteredWeightG Decimal @db.Decimal(16, 4)
+  order          Int
+  notes          String  @default("")
+}
+
+model CalibrationCoefficient {
+  id                String            @id @default(cuid())
+  organizationId    String
+  correctionRuleId  String
+  pigmentId         String?
+  paintSystem       String
+  paintType         PaintType
+  severity          Severity
+  gramsPer100g      Decimal           @db.Decimal(16, 6)
+  minimumSuggestedG Decimal?          @db.Decimal(16, 4)
+  maximumSuggestedG Decimal?          @db.Decimal(16, 4)
+  precision         Int               @default(2)
+  status            CalibrationStatus @default(DRAFT)
+  source            String
+  sampleSize        Int
+  notes             String            @default("")
+  version           Int               @default(1)
+  previousVersionId String?           @unique
+  approvedBy        String?
+  approvedAt        DateTime?
+  active            Boolean           @default(true)
+  isDemo            Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([organizationId, correctionRuleId, paintSystem, paintType, severity])
+}
+
+model AdjustmentSession {
+  id                    String                 @id @default(cuid())
+  organizationId        String
+  userId                String
+  formulaId             String
+  formula               Formula                @relation(fields: [formulaId], references: [id])
+  status                AdjustmentStatus       @default(IN_PROGRESS)
+  initialMassG          Decimal                @db.Decimal(16, 4)
+  currentMassG          Decimal                @db.Decimal(16, 4)
+  paintType             PaintType
+  version               Int                    @default(1)
+  startedAt             DateTime               @default(now())
+  approvedAt            DateTime?
+  archivedAt            DateTime?
+  notes                 String                 @default("")
+  iterations            AdjustmentIteration[]
+  observations          Observation[]
+  panels                TestPanel[]
+  applicationConditions ApplicationCondition[]
+  colorBank             ColorBankEntry?
+
+  @@index([organizationId, status])
+}
+
+model AdjustmentIteration {
+  id               String               @id @default(cuid())
+  sessionId        String
+  session          AdjustmentSession    @relation(fields: [sessionId], references: [id])
+  iterationNumber  Int
+  correctionRuleId String
+  ruleSnapshot     Json
+  result           String               @default("PENDING")
+  notes            String               @default("")
+  massAfterG       Decimal              @db.Decimal(16, 4)
+  additions        CorrectionAddition[]
+  observations     Observation[]
+  createdAt        DateTime             @default(now())
+
+  @@unique([sessionId, iterationNumber])
+}
+
+model CorrectionAddition {
+  id                       String              @id @default(cuid())
+  iterationId              String
+  iteration                AdjustmentIteration @relation(fields: [iterationId], references: [id])
+  pigmentId                String?
+  code                     String
+  name                     String
+  characteristic           String
+  addedAmountG             Decimal             @db.Decimal(16, 4)
+  suggestedAmountG         Decimal?            @db.Decimal(16, 4)
+  calibrationCoefficientId String?
+  coefficientSnapshot      Json?
+  createdAt                DateTime            @default(now())
+}
+
+model Observation {
+  id                String               @id @default(cuid())
+  sessionId         String
+  session           AdjustmentSession    @relation(fields: [sessionId], references: [id])
+  iterationId       String?
+  iteration         AdjustmentIteration? @relation(fields: [iterationId], references: [id])
+  view              ObservationView
+  mainTone          PrimaryTone?
+  direction         ToneDirection?
+  severity          Severity?
+  lightingCondition LightingCondition
+  notes             String               @default("")
+  createdAt         DateTime             @default(now())
+}
+
+model ApplicationCondition {
+  id               String            @id @default(cuid())
+  sessionId        String
+  session          AdjustmentSession @relation(fields: [sessionId], references: [id])
+  dilution         String?
+  pressure         String?
+  sprayDistance    String?
+  numberOfCoats    Int?
+  wetOrDry         String?
+  temperature      String?
+  humidity         String?
+  gunModel         String?
+  nozzle           String?
+  thinner          String?
+  primerColor      String?
+  clearCoatApplied Boolean           @default(false)
+  notes            String            @default("")
+  panel            TestPanel?
+}
+
+model TestPanel {
+  id                     String                @id @default(cuid())
+  sessionId              String
+  session                AdjustmentSession     @relation(fields: [sessionId], references: [id])
+  iterationId            String?
+  image                  Bytes?
+  imageMime              String?
+  appliedAt              DateTime              @default(now())
+  clearCoatApplied       Boolean               @default(false)
+  approved               Boolean               @default(false)
+  notes                  String                @default("")
+  applicationConditionId String?               @unique
+  applicationCondition   ApplicationCondition? @relation(fields: [applicationConditionId], references: [id])
+}
+
+model ColorBankEntry {
+  id              String            @id @default(cuid())
+  organizationId  String
+  sessionId       String            @unique
+  session         AdjustmentSession @relation(fields: [sessionId], references: [id])
+  originalFormula Json
+  finalFormula    Json
+  professional    String
+  workshop        String
+  searchText      String
+  notes           String            @default("")
+  createdAt       DateTime          @default(now())
+  archivedAt      DateTime?
+
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  action         String
+  entityType     String
+  entityId       String
+  before         Json?
+  after          Json?
+  reason         String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+}

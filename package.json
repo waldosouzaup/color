@@ -1,0 +1,79 @@
+{
+  "name": "mestre-da-colorimetria",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import dotenv/config node_modules/next/dist/bin/next dev --hostname 0.0.0.0",
+    "build": "prisma generate && next build --webpack",
+    "start": "node --import dotenv/config scripts/start.mjs",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "prisma generate && tsc --noEmit",
+    "test": "vitest run",
+    "test:db": "tsx tests/integration.ts",
+    "test:e2e": "playwright test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx db/seed.ts",
+    "db:local": "tsx scripts/local-postgres.ts",
+    "production:check": "tsx scripts/production.ts check",
+    "production:migrate": "tsx scripts/production.ts migrate",
+    "production:bootstrap": "tsx scripts/production.ts bootstrap",
+    "production:verify": "tsx scripts/production.ts verify",
+    "test:supabase": "tsx tests/supabase-schema.ts",
+    "test:e2e:production": "playwright test --config playwright.production.config.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "better-auth": "^1.4.0",
+    "decimal.js": "^10.6.0",
+    "lucide-react": "^0.577.0",
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "dotenv": "^17.0.0",
+    "embedded-postgres": "^18.1.0-beta.15",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.0.0",
+    "prisma": "^6.19.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.11"
+  },
+  "prisma": {
+    "schema": "db/schema.prisma",
+    "seed": "tsx db/seed.ts"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "deepmerge-ts": "^8.0.0"
+    },
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "sharp",
+      "embedded-postgres",
+      "@embedded-postgres/linux-x64",
+      "@embedded-postgres/linux-arm64",
+      "@embedded-postgres/darwin-arm64",
+      "@embedded-postgres/darwin-x64",
+      "unrs-resolver"
+    ]
+  },
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=22.12.0 <25"
+  }
+}
