@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -11,6 +11,7 @@ import {
   Plus,
   FileText,
   Archive,
+  LoaderCircle,
 } from "lucide-react";
 import {
   Heading,
@@ -20,6 +21,7 @@ import {
   Field,
   value,
   Alert,
+  Empty,
 } from "@/components/ui";
 import type { Adjustment, Workspace } from "@/lib/client-types";
 import {
@@ -153,13 +155,80 @@ function PanelForm({
     </SaveForm>
   );
 }
+/* Carrega a árvore completa do ajuste sob demanda: a bancada só traz o resumo. */
 export function SessionView({
+  id,
+  workspace,
+  refresh,
+}: {
+  id: string;
+  workspace: Workspace;
+  refresh: () => Promise<void>;
+}) {
+  const [session, setSession] = useState<Adjustment | null>(null);
+  const [error, setError] = useState("");
+  const fetchSession = useCallback(async (): Promise<Adjustment> => {
+    const response = await fetch(`/api/sessions/${id}`, { cache: "no-store" });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      throw new Error(body.error || "Não foi possível carregar este ajuste.");
+    }
+    return (await response.json()) as Adjustment;
+  }, [id]);
+  const reload = useCallback(async () => {
+    setSession(await fetchSession());
+    setError("");
+  }, [fetchSession]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchSession()
+      .then((data) => {
+        if (!cancelled) setSession(data);
+      })
+      .catch((e) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Erro de conexão.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchSession]);
+  if (error)
+    return (
+      <Empty
+        title="Ajuste indisponível"
+        description={error}
+        href="/sessions"
+        cta="Voltar aos ajustes"
+      />
+    );
+  if (!session)
+    return (
+      <div className="loading-panel">
+        <LoaderCircle className="spin" />
+        <p>Carregando o ajuste…</p>
+      </div>
+    );
+  return (
+    <SessionDetail
+      session={session}
+      workspace={workspace}
+      reload={reload}
+      refresh={refresh}
+    />
+  );
+}
+function SessionDetail({
   session,
   workspace,
+  reload,
   refresh,
 }: {
   session: Adjustment;
   workspace: Workspace;
+  reload: () => Promise<void>;
   refresh: () => Promise<void>;
 }) {
   const params = useSearchParams();
@@ -176,8 +245,9 @@ export function SessionView({
   const active = session.status === "IN_PROGRESS";
   const completed = session.status === "APPROVED";
   const mass = (v: string) => formatMass(v, workspace.organization.precision);
+  /* Recarrega o ajuste e o resumo da bancada em paralelo. */
   async function done() {
-    await refresh();
+    await Promise.all([reload(), refresh()]);
     setDialog(null);
   }
   return (

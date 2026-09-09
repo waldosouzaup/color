@@ -28,7 +28,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import type { Workspace, Adjustment } from "@/lib/client-types";
+import type { Workspace, AdjustmentSummary } from "@/lib/client-types";
 import {
   formatMass,
   formatDate,
@@ -66,7 +66,7 @@ const adminNav = [
   { href: "/coefficients", label: "Calibração de dosagem", icon: Scale },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
-function SessionsList({ sessions }: { sessions: Adjustment[] }) {
+function SessionsList({ sessions }: { sessions: AdjustmentSummary[] }) {
   return (
     <div className="session-list">
       {sessions.map((s) => (
@@ -86,7 +86,7 @@ function SessionsList({ sessions }: { sessions: Adjustment[] }) {
           <code>{s.formula.colorCode}</code>
           <div className="session-row-mass">
             <strong>{formatMass(s.currentMassG)} g</strong>
-            <small>{s.iterations.length} correções</small>
+            <small>{s._count.iterations} correções</small>
           </div>
           <Badge
             kind={
@@ -924,22 +924,16 @@ export function Workbench() {
   let content;
   if (!section) content = <Dashboard workspace={workspace} />;
   else if (section === "new") content = <FormulaForm refresh={refresh} />;
-  else if (section === "sessions" && id) {
-    const session = workspace.sessions.find((s) => s.id === id);
-    content = session ? (
+  else if (section === "sessions" && id)
+    content = (
       <SessionView
         key={id}
-        session={session}
+        id={id}
         workspace={workspace}
         refresh={refresh}
       />
-    ) : (
-      <Empty
-        title="Ajuste não encontrado"
-        description="Este ajuste não está disponível nesta oficina."
-      />
     );
-  } else if (section === "sessions" || section === "history")
+  else if (section === "sessions" || section === "history")
     content = <Listing workspace={workspace} kind={section} />;
   else if (section === "formulas" && id === "new")
     content = <FormulaForm standalone refresh={refresh} />;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "../lib/db";
 import type { Actor } from "../lib/access";
+import { AppError } from "../lib/errors";
 import { outputSchema } from "../services/schemas";
 import type { CorrectionRule } from "../domain/colorimetry/types";
 export const panelSelect = {
@@ -14,6 +15,7 @@ export const panelSelect = {
   imageMime: true,
   applicationCondition: true,
 } as const;
+/* Árvore completa de um ajuste: só o detalhe de uma sessão precisa disso. */
 export const sessionInclude = {
   formula: { include: { components: { orderBy: { order: "asc" as const } } } },
   iterations: {
@@ -22,8 +24,28 @@ export const sessionInclude = {
   },
   panels: { select: panelSelect, orderBy: { appliedAt: "asc" as const } },
   observations: true,
-  applicationConditions: true,
   colorBank: true,
+} as const;
+/* Forma enxuta para listagens, visão geral e contadores do menu. */
+export const sessionSummarySelect = {
+  id: true,
+  formulaId: true,
+  status: true,
+  currentMassG: true,
+  startedAt: true,
+  approvedAt: true,
+  formula: {
+    select: {
+      id: true,
+      colorCode: true,
+      description: true,
+      manufacturer: true,
+      model: true,
+      year: true,
+      isDemo: true,
+    },
+  },
+  _count: { select: { iterations: true } },
 } as const;
 export async function getRules(
   organizationId: string,
@@ -46,8 +68,17 @@ export async function getRules(
   }
   return [...selected.values()];
 }
+export async function getSession(actor: Actor, id: string) {
+  const session = await db.adjustmentSession.findFirst({
+    where: { id, organizationId: actor.organizationId },
+    include: sessionInclude,
+  });
+  if (!session) throw new AppError("Ajuste não encontrado.", 404);
+  return session;
+}
 export async function getWorkspace(actor: Actor) {
   const where = { organizationId: actor.organizationId };
+  const admin = actor.role === "ADMIN";
   const [
     organization,
     formulas,
@@ -68,7 +99,7 @@ export async function getWorkspace(actor: Actor) {
     }),
     db.adjustmentSession.findMany({
       where,
-      include: sessionInclude,
+      select: sessionSummarySelect,
       orderBy: { startedAt: "desc" },
     }),
     db.pigment.findMany({
@@ -77,35 +108,47 @@ export async function getWorkspace(actor: Actor) {
       orderBy: { code: "asc" },
     }),
     getRules(actor.organizationId),
-    actor.role === "ADMIN"
-      ? db.calibrationCoefficient.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-        })
+    admin
+      ? db.calibrationCoefficient.findMany({ where, orderBy: { createdAt: "desc" } })
       : Promise.resolve([]),
     db.colorBankEntry.findMany({
       where: { ...where, archivedAt: null },
-      include: { session: { include: { formula: true } } },
+      /* originalFormula e finalFormula são blobs Json que a interface nunca lê. */
+      select: {
+        id: true,
+        sessionId: true,
+        professional: true,
+        workshop: true,
+        searchText: true,
+        notes: true,
+        createdAt: true,
+        session: {
+          select: {
+            currentMassG: true,
+            formula: {
+              select: {
+                colorCode: true,
+                description: true,
+                manufacturer: true,
+                model: true,
+                year: true,
+                isDemo: true,
+                paintType: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     }),
-    actor.role === "ADMIN"
+    admin
       ? db.user.findMany({
           where,
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            active: true,
-          },
+          select: { id: true, name: true, email: true, role: true, active: true },
         })
       : Promise.resolve([]),
-    actor.role === "ADMIN"
-      ? db.auditLog.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          take: 100,
-        })
+    admin
+      ? db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, take: 100 })
       : Promise.resolve([]),
     db.user.findMany({ where, select: { id: true, name: true } }),
   ]);
