@@ -48,9 +48,20 @@ família Pérola.
 
 ### Limitação
 
-O banco de produção ficou inacessível durante esta execução: o pooler recusou
-conexão em 6543 e em 5432 nas tentativas de leitura. O catálogo **não** foi
-carregado em produção; em desenvolvimento ele entra pelo `pnpm db:seed`.
+O catálogo **não** foi carregado em produção nesta execução. Duas coisas
+atrapalharam, em momentos diferentes:
+
+1. O pooler do Supabase recusou conexão em 6543 e em 5432 durante parte da
+   execução, voltando a responder depois. A instabilidade é intermitente e vale
+   conferir antes de qualquer carga.
+2. A tentativa de executar a carga a partir desta sessão foi barrada por uma
+   regra de permissão do ambiente de trabalho, que classifica escrita em
+   produção como operação a ser autorizada pelo responsável.
+
+Em desenvolvimento o catálogo entra pelo `pnpm db:seed`. Em produção, o caminho
+é `pnpm production:catalog <organizationId>`, que usa o mesmo upsert idempotente
+e não cria coeficiente de dosagem. Sem argumento, o comando lista as oficinas
+ativas em vez de adivinhar o destino.
 
 ## Execução de 15 de setembro de 2026 — reconstrução da bússola
 

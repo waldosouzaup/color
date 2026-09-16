@@ -39,6 +39,17 @@ pnpm production:bootstrap
 
 Os comandos leem `.env.production.local` se presente, ou usam variáveis do ambiente. O check valida os parâmetros sem imprimir senhas. O verify conecta e verifica tabelas e permissões. O bootstrap cria oficina, administrador, oito regras e auditoria; não cria bases demonstrativas ou coeficientes.
 
+## Catálogo do fabricante
+
+```sh
+pnpm production:catalog                    # lista as oficinas ativas
+pnpm production:catalog <organizationId>   # carrega o catálogo naquela oficina
+```
+
+Carrega as bases da tabela "Características das Cores Básicas" (60 de poliéster com frente e ângulo, 22 de poliuretano) na oficina indicada. O upsert usa oficina + fabricante + linha + código: repetir o comando não duplica base nem apaga comportamento editado na interface. Nenhum coeficiente de dosagem é criado — a tabela descreve comportamento óptico, não quantidade.
+
+Para remover a carga, apague os comportamentos e depois as bases das linhas `Lazzuril Base Poliéster` e `Lazzudur Poliuretano` da oficina.
+
 Repetir o bootstrap preserva a senha de um administrador existente na organização informada. O seed de desenvolvimento está bloqueado em produção. Não execute testes, migrate reset ou db:seed contra a base real.
 
 Após o bootstrap, retire PRODUCTION_ADMIN_PASSWORD das variáveis do runtime. Alteração de senha está em **Minha conta**. Um administrador pode redefinir a senha de outro usuário em Configurações, com revogação de sessões e auditoria. Envio/recuperação de senha por e-mail exige uma integração futura; não foi configurado um serviço de e-mail fictício.
