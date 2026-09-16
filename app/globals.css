@@ -4582,3 +4582,267 @@ tfoot td {
   gap: 18px;
   padding: 64px 24px;
 }
+
+/* --- Tabela e biblioteca técnica de pigmentos --- */
+.pigment-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.pigment-toolbar .filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.pigment-toolbar select {
+  min-width: 170px;
+  max-width: 240px;
+}
+.segmented-toggle {
+  display: inline-flex;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.button-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.button-toggle:hover {
+  color: var(--ink);
+}
+.button-toggle.active {
+  background: var(--surface-raised);
+  color: var(--green);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.pigment-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 2px 14px;
+}
+.pigment-status-bar strong {
+  color: var(--ink);
+}
+.button-link {
+  background: none;
+  border: 0;
+  color: var(--green);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.button-link:hover {
+  color: var(--accent-hover);
+}
+.pigment-table-container {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.pigment-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pigment-table-container th {
+  background: var(--surface-raised);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.pigment-table-container td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.pigment-table-container tr:hover td {
+  background: var(--card-hover);
+}
+.pigment-code-pill {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.pigment-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pigment-name-cell strong {
+  display: block;
+  font-size: 13px;
+  color: var(--ink);
+}
+.pigment-name-cell .sub-detail {
+  font-size: 11px;
+  color: var(--muted);
+}
+.pigment-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.pigment-dot.violet { background: #9333ea; }
+.pigment-dot.red_oxide { background: #b91c1c; }
+.pigment-dot.blue_green { background: #0284c7; }
+.pigment-dot.red_blue { background: #e11d48; }
+.pigment-dot.lemon_yellow { background: #eab308; }
+.pigment-dot.red_support { background: #ea580c; }
+.pigment-dot.neutral { background: var(--muted); }
+
+.behavior-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.behavior-cell .effect-text {
+  font-weight: 500;
+  color: var(--ink);
+  font-size: 13px;
+}
+.behavior-cell .effect-notes {
+  font-size: 11px;
+  color: var(--muted);
+}
+.badge-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--line);
+  color: var(--muted);
+  width: fit-content;
+}
+.behavior-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0;
+}
+.behavior-badge-box {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.behavior-badge-box.full {
+  grid-column: 1 / -1;
+}
+.behavior-badge-box small {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+}
+.behavior-badge-box strong {
+  font-size: 12px;
+  color: var(--ink);
+}
+
+/* --- Painel de comportamento óptico na tela de ajuste (diagnosis.tsx) --- */
+.pigment-behavior-panel {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.behavior-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.behavior-system {
+  font-weight: 600;
+  color: var(--green);
+}
+.behavior-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.behavior-view-box {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.behavior-view-box.full {
+  grid-column: 1 / -1;
+}
+.behavior-view-box .view-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.behavior-view-box strong {
+  font-size: 13px;
+  color: var(--ink);
+}
+.behavior-view-box p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+.behavior-desc {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  font-style: italic;
+  margin: 0;
+}
+.system-filter-toggle {
+  margin-top: 6px;
+  font-size: 11px;
+}
+

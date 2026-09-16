@@ -77,9 +77,30 @@ function AdditionInput({
       cancelled = true;
     };
   }, [rule, session.id, severity, row.pigmentId]);
-  const bases = workspace.pigments.filter(
-    (p) => p.active && p.characteristic === row.characteristic,
-  );
+  const [showAllSystems, setShowAllSystems] = useState(false);
+  const formulaSystem = session.formula?.paintSystem?.trim().toLowerCase() || "";
+
+  const systemMatchedBases = workspace.pigments.filter((p) => {
+    if (!p.active || p.characteristic !== row.characteristic) return false;
+    if (showAllSystems || !formulaSystem) return true;
+    const pSys = p.systemType.toLowerCase();
+    if (formulaSystem.includes("poliéster") || formulaSystem.includes("poliester")) {
+      return pSys.includes("poliéster") || pSys.includes("poliester");
+    }
+    if (formulaSystem.includes("poliuretano") || formulaSystem.includes("pu")) {
+      return pSys.includes("poliuretano") || pSys.includes("pu");
+    }
+    return pSys.includes(formulaSystem) || formulaSystem.includes(pSys);
+  });
+
+  const bases = systemMatchedBases.length > 0 || showAllSystems
+    ? systemMatchedBases
+    : workspace.pigments.filter(
+        (p) => p.active && p.characteristic === row.characteristic,
+      );
+
+  const selectedPigment = workspace.pigments.find((p) => p.id === row.pigmentId);
+
   return (
     <div className="addition-card">
       <h3>
@@ -90,7 +111,7 @@ function AdditionInput({
         <select
           value={row.pigmentId || ""}
           onChange={(e) => {
-            const p = bases.find((b) => b.id === e.target.value);
+            const p = workspace.pigments.find((b) => b.id === e.target.value);
             setDose(null);
             change({
               ...row,
@@ -103,12 +124,66 @@ function AdditionInput({
           <option value="">Informar código e nome manualmente</option>
           {bases.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.code} · {p.name}
+              {p.code} · {p.name} [{p.systemType}]
               {p.isDemo ? " [DADO DEMONSTRATIVO]" : ""}
             </option>
           ))}
         </select>
+        {formulaSystem && (
+          <div className="system-filter-toggle">
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={showAllSystems}
+                onChange={(e) => setShowAllSystems(e.target.checked)}
+              />
+              Mostrar bases de outros sistemas (fórmula: {session.formula?.paintSystem})
+            </label>
+          </div>
+        )}
       </Field>
+
+      {selectedPigment && (
+        <div className="pigment-behavior-panel">
+          <div className="behavior-header">
+            <span className="behavior-title">Comportamento óptico de referência</span>
+            <span className="behavior-system">{selectedPigment.systemType} · {selectedPigment.family}</span>
+          </div>
+          <div className="behavior-grid">
+            {selectedPigment.behaviors
+              .filter((b) => b.view === "FRONT")
+              .map((b) => (
+                <div key={b.id} className="behavior-view-box">
+                  <span className="view-tag">Vista de Frente</span>
+                  <strong>{b.hueCharacteristic || "Efeito neutro"}</strong>
+                  {b.notes && <p>{b.notes}</p>}
+                </div>
+              ))}
+            {selectedPigment.behaviors
+              .filter((b) => b.view === "ANGLE")
+              .map((b) => (
+                <div key={b.id} className="behavior-view-box">
+                  <span className="view-tag">Vista em Ângulo</span>
+                  <strong>{b.hueCharacteristic || "Efeito neutro"}</strong>
+                  {b.notes && <p>{b.notes}</p>}
+                </div>
+              ))}
+            {selectedPigment.behaviors
+              .filter((b) => b.view === "GENERAL")
+              .map((b) => (
+                <div key={b.id} className="behavior-view-box full">
+                  <span className="view-tag">Comportamento Geral (PU)</span>
+                  <strong>{b.hueCharacteristic || "Efeito padrão"}</strong>
+                  {b.notes && <p>{b.notes}</p>}
+                </div>
+              ))}
+          </div>
+          {selectedPigment.description && (
+            <p className="behavior-desc">{selectedPigment.description}</p>
+          )}
+        </div>
+      )}
+
       <div className="form-grid">
         <Field label="Código do pigmento">
           <input

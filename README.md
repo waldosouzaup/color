@@ -125,7 +125,7 @@ O botão Relatório abre a impressão do navegador com uma folha própria, sem a
 - Sem leitura colorimétrica automática de foto, espectrofotômetro virtual, IA de dosagem, scraping ou API falsa de fabricante.
 - Links oficiais configuráveis abrem em outra aba; `FormulaProvider`/`ManualFormulaProvider` são contratos para integração autorizada futura.
 - Importadores CSV e PDF programático são futuros; contratos em [IMPORTS.md](docs/IMPORTS.md).
-- A biblioteca inicial contém somente bases DEMO; características comerciais do livro não foram importadas em massa. As fontes e referências são campos próprios.
+- A biblioteca traz o catálogo **Lazzuril / Sherwin-Williams** transcrito da tabela "Características das Cores Básicas": 60 bases de poliéster com comportamento separado de frente e ângulo e 22 de poliuretano com característica única, em `domain/colorimetry/lazzuril-catalog.ts`. Cada comportamento carrega fonte e referência próprias. São descrições ópticas do fabricante, não coeficientes: continuam sem liberar dosagem. Bases DEMO seguem disponíveis apenas fora de produção.
 - Bootstrap da oficina carrega o conjunto de registros da organização. Para bases grandes, implementar paginação/consulta no servidor e armazenamento de fotos dedicado.
 - Há troca de senha na conta e redefinição administrativa. Recuperação/convite por e-mail não estão configurados. O bootstrap de produção provisiona a oficina e o administrador.
 - Administração das saídas de regras usa editor JSON técnico validado. Uma interface visual mais especializada pode substituí-lo sem mudar o domínio.

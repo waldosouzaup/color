@@ -5,6 +5,7 @@ import { db } from "../lib/db";
 import { initialRules } from "../domain/colorimetry/correction-engine";
 import { pigmentLabels } from "../domain/colorimetry/tones";
 import { json } from "../services/adjustments";
+import { seedLazzurilBases } from "../services/lazzuril-seed";
 if (process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production') throw new Error('Seed de desenvolvimento bloqueado em produção. Use production:bootstrap.');
 const email = process.env.SEED_ADMIN_EMAIL;
 const password = process.env.SEED_ADMIN_PASSWORD;
@@ -94,7 +95,11 @@ if (
     });
   }
 }
+const seededCount = await seedLazzurilBases("development");
 console.log(
-  "Seed concluído. Oito regras, organização, administrador e bases DEMO opcionais. Nenhum coeficiente inventado.",
+  `Seed Lazzuril concluído: ${seededCount} bases comerciais cadastradas (Poliéster com Frente/Ângulo e Poliuretano).`,
+);
+console.log(
+  "Seed concluído. Oito regras, organização, administrador e catálogo Lazzuril oficial. Nenhum coeficiente inventado.",
 );
 await db.$disconnect();

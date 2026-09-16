@@ -20,6 +20,7 @@
     "production:migrate": "tsx scripts/production.ts migrate",
     "production:bootstrap": "tsx scripts/production.ts bootstrap",
     "production:verify": "tsx scripts/production.ts verify",
+    "production:catalog": "tsx scripts/production.ts catalog",
     "test:supabase": "tsx tests/supabase-schema.ts",
     "test:e2e:production": "playwright test --config playwright.production.config.ts"
   },

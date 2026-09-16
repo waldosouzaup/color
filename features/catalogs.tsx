@@ -7,6 +7,8 @@ import {
   FlaskConical,
   ExternalLink,
   ShieldCheck,
+  Table as TableIcon,
+  LayoutGrid,
 } from "lucide-react";
 import {
   Heading,
@@ -33,21 +35,39 @@ export function PigmentsView({
   const [search, setSearch] = useState("");
   const [edit, setEdit] = useState<Pigment | "new" | null>(null);
   const [filter, setFilter] = useState("");
+  const [systemFilter, setSystemFilter] = useState("");
+  const [familyFilter, setFamilyFilter] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const admin = workspace.actor.role === "ADMIN";
-  const rows = workspace.pigments.filter(
-    (p) =>
-      `${p.code} ${p.name} ${p.manufacturer} ${p.productLine}`
-        .toLowerCase()
-        .includes(search.toLowerCase()) &&
-      (!filter || p.characteristic === filter),
-  );
+
+  const availableSystems = Array.from(
+    new Set(workspace.pigments.map((p) => p.systemType).filter(Boolean)),
+  ).sort();
+
+  const availableFamilies = Array.from(
+    new Set(workspace.pigments.map((p) => p.family).filter(Boolean)),
+  ).sort();
+
+  const rows = workspace.pigments.filter((p) => {
+    const searchableText = `${p.code} ${p.name} ${p.manufacturer} ${p.productLine} ${p.systemType} ${p.family} ${p.description} ${p.behaviors
+      .map((b) => `${b.hueCharacteristic} ${b.notes}`)
+      .join(" ")}`.toLowerCase();
+
+    const matchesSearch = !search || searchableText.includes(search.toLowerCase());
+    const matchesChar = !filter || p.characteristic === filter;
+    const matchesSystem = !systemFilter || p.systemType === systemFilter;
+    const matchesFamily = !familyFilter || p.family === familyFilter;
+
+    return matchesSearch && matchesChar && matchesSystem && matchesFamily;
+  });
+
   const p = edit && edit !== "new" ? edit : null;
   return (
     <>
       <Heading
         eyebrow="REFERÊNCIA TÉCNICA"
         title="Biblioteca de pigmentos"
-        description="Bases, características e comportamento na frente e no ângulo."
+        description="Catálogo de bases, características ópticas e comportamento na frente e no ângulo."
       >
         {admin && (
           <button className="button primary" onClick={() => setEdit("new")}>
@@ -56,84 +76,300 @@ export function PigmentsView({
           </button>
         )}
       </Heading>
-      <div className="toolbar">
+      <div className="toolbar pigment-toolbar">
         <label className="search">
           <Search size={18} />
           <input
             aria-label="Buscar pigmentos"
-            placeholder="Buscar nome, código, fabricante ou linha…"
+            placeholder="Buscar por código (ex: HS 717, LM 451, LP 501), nome, efeito..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
-        <select
-          aria-label="Filtrar característica"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="">Todas as características</option>
-          {characteristics.map((c) => (
-            <option key={c} value={c}>
-              {pigmentLabels[c]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="pigment-grid">
-        {rows.map((p) => (
-          <article
-            key={p.id}
-            className={`panel pigment-card ${!p.active ? "inactive" : ""}`}
+        <div className="filter-group">
+          <select
+            aria-label="Filtrar sistema"
+            value={systemFilter}
+            onChange={(e) => setSystemFilter(e.target.value)}
           >
-            <div className="split">
-              <span
-                className={`large-pigment ${p.characteristic?.toLowerCase() || ""}`}
-              >
-                <FlaskConical size={22} />
-              </span>
-              {admin && (
-                <button
-                  className="icon-button"
-                  aria-label={`Editar ${p.code}`}
-                  onClick={() => setEdit(p)}
-                >
-                  <Pencil size={17} />
-                </button>
-              )}
-            </div>
-            <code>{p.code}</code>
-            <h3>{p.name}</h3>
-            <p>
-              {p.manufacturer} · {p.productLine}
-            </p>
-            <div className="badge-row">
-              {p.isDemo && <Badge kind="warning">DADO DEMONSTRATIVO</Badge>}
-              {!p.active && <Badge>INATIVO</Badge>}
-              <Badge>{p.family}</Badge>
-            </div>
-            <p>{p.description}</p>
-            {p.behaviors.map((b) => (
-              <details key={b.id}>
-                <summary>
-                  {b.view === "FRONT"
-                    ? "Frente"
-                    : b.view === "ANGLE"
-                      ? "Ângulo"
-                      : "Comportamento geral"}
-                </summary>
-                {b.hueCharacteristic && <p>Matiz: {b.hueCharacteristic}</p>}
-                {b.lightnessEffect && <p>Luminosidade: {b.lightnessEffect}</p>}
-                {b.cleanlinessEffect && <p>Limpeza: {b.cleanlinessEffect}</p>}
-                {b.particleEffect && <p>Partículas: {b.particleEffect}</p>}
-                <p>{b.notes}</p>
-                <small>
-                  Fonte: {b.source} · {b.sourceReference}
-                </small>
-              </details>
+            <option value="">Todos os sistemas ({availableSystems.length})</option>
+            {availableSystems.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
-          </article>
-        ))}
+          </select>
+          <select
+            aria-label="Filtrar família"
+            value={familyFilter}
+            onChange={(e) => setFamilyFilter(e.target.value)}
+          >
+            <option value="">Todas as famílias ({availableFamilies.length})</option>
+            {availableFamilies.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filtrar característica de correção"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="">Função de correção (todas)</option>
+            {characteristics.map((c) => (
+              <option key={c} value={c}>
+                {pigmentLabels[c]}
+              </option>
+            ))}
+          </select>
+          <div
+            className="segmented-toggle"
+            role="group"
+            aria-label="Modo de visualização"
+          >
+            <button
+              type="button"
+              className={`button-toggle ${viewMode === "table" ? "active" : ""}`}
+              onClick={() => setViewMode("table")}
+              title="Visualização em tabela técnica"
+            >
+              <TableIcon size={15} />
+              <span>Tabela</span>
+            </button>
+            <button
+              type="button"
+              className={`button-toggle ${viewMode === "cards" ? "active" : ""}`}
+              onClick={() => setViewMode("cards")}
+              title="Visualização em cartões"
+            >
+              <LayoutGrid size={15} />
+              <span>Cartões</span>
+            </button>
+          </div>
+        </div>
       </div>
+      <div className="pigment-status-bar">
+        <span>
+          Exibindo <strong>{rows.length}</strong> de {workspace.pigments.length}{" "}
+          bases registradas
+        </span>
+        {(search || systemFilter || familyFilter || filter) && (
+          <button
+            type="button"
+            className="button-link"
+            onClick={() => {
+              setSearch("");
+              setSystemFilter("");
+              setFamilyFilter("");
+              setFilter("");
+            }}
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {viewMode === "table" ? (
+        <div className="pigment-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: "160px" }}>Código(s)</th>
+                <th style={{ minWidth: "190px" }}>Cor / Base</th>
+                <th style={{ width: "110px" }}>Sistema</th>
+                <th style={{ width: "100px" }}>Família</th>
+                <th style={{ minWidth: "180px" }}>Comportamento na Frente</th>
+                <th style={{ minWidth: "180px" }}>Comportamento no Ângulo / Geral</th>
+                {admin && (
+                  <th style={{ width: "60px", textAlign: "right" }}>Ações</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((p) => {
+                const front = p.behaviors.find((b) => b.view === "FRONT");
+                const angle = p.behaviors.find((b) => b.view === "ANGLE");
+                const general = p.behaviors.find((b) => b.view === "GENERAL");
+                return (
+                  <tr key={p.id} className={!p.active ? "inactive" : ""}>
+                    <td>
+                      <code className="pigment-code-pill">{p.code}</code>
+                    </td>
+                    <td>
+                      <div className="pigment-name-cell">
+                        <span
+                          className={`pigment-dot ${p.characteristic?.toLowerCase() || "neutral"}`}
+                        />
+                        <div>
+                          <strong>{p.name}</strong>
+                          <div className="sub-detail">
+                            {p.manufacturer} · {p.productLine}
+                            {p.isDemo && (
+                              <>
+                                {" "}
+                                · <Badge kind="warning">DEMO</Badge>
+                              </>
+                            )}
+                            {!p.active && (
+                              <>
+                                {" "}
+                                · <Badge>INATIVO</Badge>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <Badge>{p.systemType}</Badge>
+                    </td>
+                    <td>
+                      <Badge
+                        kind={
+                          p.family === "Alumínio" || p.family === "Pérola"
+                            ? "neutral"
+                            : undefined
+                        }
+                      >
+                        {p.family}
+                      </Badge>
+                    </td>
+                    <td>
+                      {front ? (
+                        <div className="behavior-cell">
+                          <span className="effect-text">
+                            {front.hueCharacteristic || "—"}
+                          </span>
+                          {front.notes && (
+                            <small className="effect-notes">{front.notes}</small>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {angle ? (
+                        <div className="behavior-cell">
+                          <span className="effect-text">
+                            {angle.hueCharacteristic || "—"}
+                          </span>
+                          {angle.notes && (
+                            <small className="effect-notes">{angle.notes}</small>
+                          )}
+                        </div>
+                      ) : general ? (
+                        <div className="behavior-cell">
+                          <span className="effect-text">
+                            {general.hueCharacteristic || "—"}
+                          </span>
+                          <span className="badge-tag">Geral PU</span>
+                        </div>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    {admin && (
+                      <td style={{ textAlign: "right" }}>
+                        <button
+                          className="icon-button"
+                          aria-label={`Editar ${p.code}`}
+                          onClick={() => setEdit(p)}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="pigment-grid">
+          {rows.map((p) => {
+            const front = p.behaviors.find((b) => b.view === "FRONT");
+            const angle = p.behaviors.find((b) => b.view === "ANGLE");
+            const general = p.behaviors.find((b) => b.view === "GENERAL");
+            return (
+              <article
+                key={p.id}
+                className={`panel pigment-card ${!p.active ? "inactive" : ""}`}
+              >
+                <div className="split">
+                  <span
+                    className={`large-pigment ${p.characteristic?.toLowerCase() || ""}`}
+                  >
+                    <FlaskConical size={22} />
+                  </span>
+                  {admin && (
+                    <button
+                      className="icon-button"
+                      aria-label={`Editar ${p.code}`}
+                      onClick={() => setEdit(p)}
+                    >
+                      <Pencil size={17} />
+                    </button>
+                  )}
+                </div>
+                <code>{p.code}</code>
+                <h3>{p.name}</h3>
+                <p>
+                  {p.manufacturer} · {p.productLine}
+                </p>
+                <div className="badge-row">
+                  {p.isDemo && <Badge kind="warning">DADO DEMONSTRATIVO</Badge>}
+                  {!p.active && <Badge>INATIVO</Badge>}
+                  <Badge>{p.systemType}</Badge>
+                  <Badge>{p.family}</Badge>
+                </div>
+                <div className="behavior-summary-grid">
+                  {front && (
+                    <div className="behavior-badge-box">
+                      <small>Frente</small>
+                      <strong>{front.hueCharacteristic}</strong>
+                    </div>
+                  )}
+                  {angle && (
+                    <div className="behavior-badge-box">
+                      <small>Ângulo</small>
+                      <strong>{angle.hueCharacteristic}</strong>
+                    </div>
+                  )}
+                  {general && (
+                    <div className="behavior-badge-box full">
+                      <small>Comportamento Geral</small>
+                      <strong>{general.hueCharacteristic}</strong>
+                    </div>
+                  )}
+                </div>
+                <p>{p.description}</p>
+                {p.behaviors.map((b) => (
+                  <details key={b.id}>
+                    <summary>
+                      {b.view === "FRONT"
+                        ? "Detalhes Frente"
+                        : b.view === "ANGLE"
+                          ? "Detalhes Ângulo"
+                          : "Comportamento geral"}
+                    </summary>
+                    {b.hueCharacteristic && <p>Matiz: {b.hueCharacteristic}</p>}
+                    {b.lightnessEffect && <p>Luminosidade: {b.lightnessEffect}</p>}
+                    {b.cleanlinessEffect && <p>Limpeza: {b.cleanlinessEffect}</p>}
+                    {b.particleEffect && <p>Partículas: {b.particleEffect}</p>}
+                    <p>{b.notes}</p>
+                    <small>
+                      Fonte: {b.source} · {b.sourceReference}
+                    </small>
+                  </details>
+                ))}
+              </article>
+            );
+          })}
+        </div>
+      )}
       {!rows.length && (
         <Empty
           title="Nenhum pigmento encontrado"

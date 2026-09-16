@@ -1,5 +1,57 @@
 # Verificação da implementação
 
+## Execução de 16 de setembro de 2026 — catálogo Lazzuril / Sherwin-Williams
+
+Conferência da tabela "Características das Cores Básicas" (`05.jpeg`) contra
+`domain/colorimetry/lazzuril-catalog.ts`, linha a linha, com a imagem ampliada em
+seis faixas.
+
+| Bloco | Linhas na imagem | Linhas no catálogo | Resultado |
+| --- | --- | --- | --- |
+| Poliéster (Frente + Ângulo) | 60 | 60 | conferem, inclusive nome, código e as duas características |
+| Poliuretano (característica única) | 22 | 22 | conferem |
+
+Particularidades do original que foram preservadas em vez de "corrigidas":
+`HS 700` aparece em Branco Neve e em Branco; `FC 608` aparece em Azul e em Azul
+Escuro; o bloco de poliuretano tem uma coluna única de característica, por isso
+é modelado como vista `GENERAL`.
+
+### Correções aplicadas
+
+A coluna `characteristic` do pigmento é a **função de corte do método** e decide
+quais bases o formulário de adição oferece. Três vínculos descreviam
+comportamento óptico, não função de corte, e foram removidos:
+
+| Base | Vínculo anterior | Motivo da remoção |
+| --- | --- | --- |
+| Vermelho Rubi (HS 717 / LM 417) | `RED_BLUE` | `RED_BLUE` é o azul avermelhado do método; a base é um vermelho de ângulo azulado |
+| Vermelho Rubi (LP 528) | `RED_BLUE` | idem |
+| Ocre (LP 505 / LL 135 / LS 205 / FC 605) | `RED_OXIDE` | "amarelo óxido" não tem identificador equivalente no domínio |
+
+`tests/lazzuril-mapping.test.ts` passou a exigir coerência entre a base e a
+função de corte e registra a cobertura atual, incluindo a lacuna conhecida de
+`RED_SUPPORT`, que a tabela não fornece.
+
+### Comandos desta execução
+
+| Comando | Resultado |
+| --- | --- |
+| `pnpm test` | 77 testes em 6 arquivos passaram |
+| `pnpm typecheck` | Passou |
+| `pnpm lint` | Passou |
+| `pnpm db:seed` (banco local) | 82 bases carregadas: 88 pigmentos no total (com as 6 DEMO), 148 comportamentos — 60 FRONT, 60 ANGLE e 28 GENERAL |
+| `pnpm test:e2e` | 11 cenários passaram, com `--timeout=300000` |
+
+Evidência visual em `test-results/catalogo/`: biblioteca de pigmentos em tabela
+(claro, escuro e 375 px), busca por `HS 717`, filtro de poliuretano e filtro da
+família Pérola.
+
+### Limitação
+
+O banco de produção ficou inacessível durante esta execução: o pooler recusou
+conexão em 6543 e em 5432 nas tentativas de leitura. O catálogo **não** foi
+carregado em produção; em desenvolvimento ele entra pelo `pnpm db:seed`.
+
 ## Execução de 15 de setembro de 2026 — reconstrução da bússola
 
 Node.js 22.23.2, pnpm 10.33.4 (via Corepack), PostgreSQL local persistente em

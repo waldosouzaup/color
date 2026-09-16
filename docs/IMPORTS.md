@@ -18,7 +18,11 @@ manufacturer,productLine,code,view,hueCharacteristic,lightnessEffect,cleanliness
 DEMO,Treinamento,DEMO-VIOLET,GENERAL,,,,,Sem propriedades calibradas,DADO DEMONSTRATIVO,Seed
 ```
 
-`view`: ANGLE, FRONT ou GENERAL. Fonte e referência obrigatórias para todo comportamento. A tabela do livro permite estes campos, mas seu conteúdo comercial não foi importado em massa.
+`view`: ANGLE, FRONT ou GENERAL. Fonte e referência obrigatórias para todo comportamento.
+
+A tabela "Características das Cores Básicas" (Sherwin-Williams / Lazzuril) já está transcrita em `domain/colorimetry/lazzuril-catalog.ts` e é carregada por `services/lazzuril-seed.ts`, que faz upsert por organização + fabricante + linha + código — repetir a carga não duplica nem sobrescreve edições de comportamento. O poliéster usa FRONT e ANGLE separados; o poliuretano usa GENERAL, porque a fonte traz uma única coluna de característica.
+
+A coluna `characteristic` do pigmento é **função de corte do método**, não o comportamento óptico da tabela: só é preenchida quando a base é de fato aquele pigmento corretivo. Um vermelho de ângulo azulado não vira `RED_BLUE` (azul avermelhado), e "amarelo óxido" não tem identificador no domínio. `tests/lazzuril-mapping.test.ts` protege essa distinção.
 
 ## Coeficientes
 
