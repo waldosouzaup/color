@@ -83,7 +83,25 @@ for (const organization of organizations) {
     .filter((p) => !codigosCatalogo.has(p.code))
     .map((p) => `${p.code} · ${p.name}`);
 
-  const problemas = faltando.length + divergentes.length + extras.length;
+  // Base demonstrativa ativa aparece no seletor de correção como se fosse real.
+  const demonstrativas = (
+    await db.pigment.findMany({
+      where: { organizationId: organization.id, isDemo: true, active: true },
+      select: { code: true, name: true, characteristic: true },
+    })
+  ).map(
+    (p) => `${p.code} · ${p.name} (função ${p.characteristic ?? "—"})`,
+  );
+
+  // Em desenvolvimento a base demonstrativa é esperada; em produção ela é
+  // defeito, porque entra no seletor de correção como se fosse base real.
+  const emProducao =
+    process.env.APP_ENV === "production" || process.env.NODE_ENV === "production";
+  const problemas =
+    faltando.length +
+    divergentes.length +
+    extras.length +
+    (emProducao ? demonstrativas.length : 0);
   problemasTotais += problemas;
 
   console.log(`\n=== ${organization.name} (${organization.id})`);
@@ -101,6 +119,14 @@ for (const organization of organizations) {
   if (extras.length) {
     console.log(`na linha do fabricante, fora do catálogo (${extras.length}):`);
     for (const e of extras) console.log(`  ? ${e}`);
+  }
+  if (demonstrativas.length) {
+    console.log(
+      `bases demonstrativas ATIVAS (${demonstrativas.length})${emProducao ? " — defeito em produção" : " — aceitável fora de produção"}:`,
+    );
+    for (const d of demonstrativas) console.log(`  ⚠ ${d}`);
+    if (emProducao)
+      console.log("  corrija com: pnpm demo:deactivate <oficina> --apply");
   }
   if (!problemas) console.log("catálogo íntegro: nada faltando nem divergente.");
 }

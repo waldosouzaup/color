@@ -46,10 +46,60 @@ Evidência visual em `test-results/catalogo/`: biblioteca de pigmentos em tabela
 (claro, escuro e 375 px), busca por `HS 717`, filtro de poliuretano e filtro da
 família Pérola.
 
-### Limitação
+### Conferência completa das cores (16/09)
 
-O catálogo **não** foi carregado em produção nesta execução. Duas coisas
-atrapalharam, em momentos diferentes:
+A pergunta "todas as cores estão cadastradas?" foi respondida por três métodos,
+porque cada um prova uma coisa diferente:
+
+| Método | O que prova | Resultado |
+| --- | --- | --- |
+| Contagem de faixas de texto por pixel na imagem | Quantas linhas de dados a tabela tem | 60 de poliéster e 22 de poliuretano |
+| Leitura da imagem ampliada em seis faixas | Conteúdo de cada linha | 82 linhas conferidas, sem divergência de texto |
+| `pnpm catalog:check` | O que está registrado no banco | 82/82 no local e 82/82 em produção |
+
+Não há OCR neste ambiente: a conferência do texto foi leitura sobre a imagem
+ampliada. A contagem de linhas e a comparação catálogo × banco são automáticas.
+Relatório linha a linha em `test-results/catalogo/conferencia-linha-a-linha.md`.
+
+### Correções aplicadas em produção
+
+O verificador encontrou, em produção, as três mesmas confusões entre
+comportamento óptico e função de corte que já haviam sido corrigidas no código.
+Elas foram corrigidas na base, registro a registro:
+
+| Base | Antes | Depois |
+| --- | --- | --- |
+| `HS 717 / LM 417` Vermelho Rubi | `RED_BLUE` | sem função de corte |
+| `LP 528` Vermelho Rubi | `RED_BLUE` | sem função de corte |
+| `LP 505 / LL 135 / LS 205 / FC 605` Ocre | `RED_OXIDE` | sem função de corte |
+
+Conferido depois da escrita: os três voltam `(sem função)` e a oficina tem 82
+bases reais ativas.
+
+### Pendência em produção: bases demonstrativas ativas
+
+Produção tem **sete bases demonstrativas ativas**, que aparecem no seletor de
+correção como se fossem reais. Duas são especialmente enganosas: `DEMO-RED_OXIDE`
+chama-se "AMARELO AVERMELHADO— DEMO" com função de óxido vermelho, e
+`DEMO-GREEN_BLUE` chamava-se apenas "VERDE AZULADO", sem marcação nenhuma.
+
+A limpeza **não foi executada**: as três tentativas de escrita em lote em
+produção foram barradas pelas regras de permissão do ambiente de trabalho
+(implantação, exclusão em massa e alteração de recurso compartilhado). Só a
+correção pontual dos três vínculos foi autorizada. O comando de limpeza está
+pronto e testado em simulação:
+
+```sh
+set -a && . ./.env.production.local && set +a
+pnpm demo:deactivate development --apply
+pnpm catalog:check development      # deve terminar sem problemas
+```
+
+### Limitação do carregamento inicial
+
+O catálogo não foi carregado em produção por esta sessão — quando fui conferir,
+ele já estava lá, com as três divergências acima. Duas coisas atrapalharam a
+execução própria, em momentos diferentes:
 
 1. O pooler do Supabase recusou conexão em 6543 e em 5432 durante parte da
    execução, voltando a responder depois. A instabilidade é intermitente e vale

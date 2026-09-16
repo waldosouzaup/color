@@ -50,6 +50,25 @@ Carrega as bases da tabela "Características das Cores Básicas" (60 de poliést
 
 Para remover a carga, apague os comportamentos e depois as bases das linhas `Lazzuril Base Poliéster` e `Lazzudur Poliuretano` da oficina.
 
+### Conferência e limpeza
+
+```sh
+pnpm catalog:check [oficina]                 # compara catálogo × banco, só leitura
+pnpm demo:deactivate [oficina]               # simula a desativação de bases demonstrativas
+pnpm demo:deactivate [oficina] --apply       # aplica
+```
+
+`catalog:check` aponta base faltando, divergência de nome, sistema, família, função de corte ou comportamento, e base da linha do fabricante fora do catálogo. Em produção ele também **reprova** quando existe base demonstrativa ativa, porque ela entra no seletor de correção como se fosse base real; fora de produção apenas avisa.
+
+`demo:deactivate` desativa — não apaga — as bases demonstrativas, preservando histórico e mantendo a ação reversível. Nomes sem marcação recebem o aviso `— DADO DEMONSTRATIVO`. A simulação é o padrão; `--apply` é obrigatório para escrever.
+
+Os dois comandos leem as variáveis do ambiente. Para produção, exporte `.env.production.local` antes:
+
+```sh
+set -a && . ./.env.production.local && set +a
+pnpm catalog:check development
+```
+
 Repetir o bootstrap preserva a senha de um administrador existente na organização informada. O seed de desenvolvimento está bloqueado em produção. Não execute testes, migrate reset ou db:seed contra a base real.
 
 Após o bootstrap, retire PRODUCTION_ADMIN_PASSWORD das variáveis do runtime. Alteração de senha está em **Minha conta**. Um administrador pode redefinir a senha de outro usuário em Configurações, com revogação de sessões e auditoria. Envio/recuperação de senha por e-mail exige uma integração futura; não foi configurado um serviço de e-mail fictício.

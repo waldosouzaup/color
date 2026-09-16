@@ -22,6 +22,7 @@
     "production:verify": "tsx scripts/production.ts verify",
     "production:catalog": "tsx scripts/production.ts catalog",
     "catalog:check": "tsx scripts/catalog-check.ts",
+    "demo:deactivate": "tsx scripts/demo-cleanup.ts",
     "test:supabase": "tsx tests/supabase-schema.ts",
     "test:e2e:production": "playwright test --config playwright.production.config.ts"
   },
