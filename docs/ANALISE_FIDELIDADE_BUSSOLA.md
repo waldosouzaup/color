@@ -2,6 +2,8 @@
 
 Data: 15/09/2026. Código examinado: commit `588deb8`, sem alterações prévias no diretório de trabalho.
 
+**Nota de atualização — 16/09/2026:** esta análise descreve o estado histórico acima. O repositório evoluiu desde então. A explicação em vídeo do usuário esclareceu uma necessidade adicional: localizar bases pelo comportamento desejado na frente e no ângulo, usando o catálogo técnico. Consulte `REQUISITOS_VIDEO_USUARIO.md` para as evidências, a comparação com o código atual (`2923398`) e o complemento ao prompt. O vídeo não demonstra a mecânica dos discos.
+
 ## 1. Conclusão
 
 A implementação atual possui um domínio de correções aproveitável, mas representa outro instrumento visual. Ela usa oito posições equidistantes, um bisel metálico escuro, graduação de graus e uma lente central. A imagem `aplicativo.jpeg` apresenta um disco claro, doze setores externos, quatro esferas de tons fundamentais, oito esferas de direções e informações de correção distribuídas no interior. Um segundo disco aparece separado, abaixo do primeiro.

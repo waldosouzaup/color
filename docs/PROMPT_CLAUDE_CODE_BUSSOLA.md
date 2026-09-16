@@ -2,9 +2,13 @@
 
 Copie o conteúdo a partir de “Tarefa” para uma sessão do Claude Code aberta no projeto. Disponibilize também a imagem local `aplicativo.jpeg`.
 
+**Complemento de 16/09/2026:** leia também `docs/REQUISITOS_VIDEO_USUARIO.md`. O vídeo esclarece a necessidade de consultar bases por comportamento desejado na frente **e** no ângulo, por exemplo “amarelar a frente e deixar o ângulo azul”. Essa consulta complementa a bússola e usa o catálogo técnico já existente. O documento inclui evidências, uma divergência na resposta do chatbot e um bloco executável adicional para o Claude Code. Ao copiar este prompt, inclua esse complemento. Os achados de código abaixo foram levantados em 15/09; revalide-os no estado atual para preservar correções já implementadas.
+
 ---
 
 ## Tarefa
+
+Além dos requisitos visuais abaixo, considere o esclarecimento de `docs/REQUISITOS_VIDEO_USUARIO.md` e implemente a consulta qualitativa ali especificada quando este prompt completo for executado. O vídeo não esclarece a mecânica do segundo disco e não autoriza inferir dosagens. A consulta de propriedades documentadas amplia a funcionalidade sem substituir as oito regras de matiz.
 
 Trabalhe no projeto `/home/waldo/Projetos/color`. Analise sua estrutura e implemente a correção da bússola cromática para reproduzir com fidelidade o design da imagem `/home/waldo/Projetos/color/aplicativo.jpeg`, preservando e completando a funcionalidade documentada.
 
