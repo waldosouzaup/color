@@ -5,7 +5,10 @@ import { db } from "../../lib/db";
 const email = process.env.SEED_ADMIN_EMAIL!;
 const password = process.env.SEED_ADMIN_PASSWORD!;
 async function login(page: Page) {
-  await page.goto("/login");
+  await page.goto("/login", { waitUntil: "load" });
+  // Sem esperar a hidratação, o clique cai na submissão nativa do formulário.
+  await expect(page.getByRole("button", { name: "Mostrar senha" })).toBeEnabled();
+  await page.waitForTimeout(500);
   await page.getByLabel("E-mail", { exact: true }).fill(email);
   await page.getByLabel("Senha", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Entrar na oficina" }).click();
@@ -224,9 +227,18 @@ test("API isola uma segunda oficina e rejeita administração por profissional",
   await login(page);
   const workspaceResponse = await page.request.get("/api/workspace");
   const workspace = await workspaceResponse.json();
-  const foreignSession = workspace.sessions.find(
-    (s: { panels: unknown[] }) => s.panels.length > 0,
-  );
+  // A listagem do workspace é enxuta e não traz chapas desde a carga sob
+  // demanda dos ajustes; quem as fornece é o detalhe da sessão.
+  let foreignSession: { id: string; panels: { id: string }[] } | undefined;
+  for (const summary of workspace.sessions as { id: string }[]) {
+    const detail = await page.request.get(`/api/sessions/${summary.id}`);
+    if (!detail.ok()) continue;
+    const session = await detail.json();
+    if (session.panels?.length) {
+      foreignSession = session;
+      break;
+    }
+  }
   expect(foreignSession).toBeTruthy();
   const organizationId = `e2e-isolation-${randomUUID()}`;
   const userId = randomUUID();
@@ -271,7 +283,7 @@ test("API isola uma segunda oficina e rejeita administração por profissional",
     expect(own.users).toHaveLength(0);
     expect(
       (
-        await request.get(`/api/panels/${foreignSession.panels[0].id}`)
+        await request.get(`/api/panels/${foreignSession!.panels[0].id}`)
       ).status(),
     ).toBe(404);
     expect(
@@ -281,7 +293,7 @@ test("API isola uma segunda oficina e rejeita administração por profissional",
           data: {
             action: "diagnose",
             data: {
-              sessionId: foreignSession.id,
+              sessionId: foreignSession!.id,
               diagnosis: { mainTone: "BLUE", direction: "GREENISH" },
             },
           },

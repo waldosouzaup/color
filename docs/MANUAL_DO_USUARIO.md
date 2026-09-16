@@ -12,7 +12,7 @@ Este guia foi elaborado para orientar o profissional colorista e o preparador de
 2. [O Princípio Fundamental: Método Primeiro Ângulo](#2-o-princípio-fundamental-método-primeiro-ângulo)
 3. [Passo 1: Iniciar um Novo Ajuste (Fórmula de Origem)](#3-passo-1-iniciar-um-novo-ajuste-fórmula-de-origem)
 4. [Passo 2: Preparação e Primeira Chapa de Teste](#4-passo-2-preparação-e-primeira-chapa-de-teste)
-5. [Passo 3: Diagnóstico com a Bússola Cromática](#5-passo-3-diagnóstico-com-a-bússola-cromática)
+5. [Passo 3: Diagnóstico com a Bússola da Colorimetria](#5-passo-3-diagnóstico-com-a-bússola-da-colorimetria)
 6. [Passo 4: Registro da Correção e Pesagem na Balança](#6-passo-4-registro-da-correção-e-pesagem-na-balança)
 7. [Passo 5: Nova Chapa e Avaliação da Frente](#7-passo-5-nova-chapa-e-avaliação-da-frente)
 8. [Passo 6: Aprovação Final e Banco de Cores](#8-passo-6-aprovação-final-e-banco-de-cores)
@@ -23,8 +23,10 @@ Este guia foi elaborado para orientar o profissional colorista e o preparador de
 ## 1. Acesso e Interface
 
 ### 1.1 Login no Sistema
-1. Acesse o sistema pelo navegador (ex.: `http://localhost:3004`).
+1. Acesse o endereço da sua oficina pelo navegador (em desenvolvimento, algo como `http://localhost:3004`).
 2. Digite seu **E-mail** e **Senha** cadastrados e clique em **"Entrar na oficina"**.
+3. Não existe cadastro público: quem cria novos acessos é o administrador da oficina, em **Configurações**. A senha precisa ter no mínimo 12 caracteres.
+4. Errou a senha várias vezes? O sistema aceita cinco tentativas por minuto; espere um minuto antes de tentar de novo.
 
 ### 1.2 Alternância de Tema (Dark Studio / Claro)
 - No canto superior direito da tela, clique no botão de **Tema** (ícone de Sol/Lua).
@@ -76,12 +78,14 @@ Antes de mexer em qualquer pigmento, memorize a regra de ouro do método:
 
 ---
 
-## 5. Passo 3: Diagnóstico com a Bússola Cromática
+## 5. Passo 3: Diagnóstico com a Bússola da Colorimetria
 
 Com a primeira chapa seca sob iluminação controlada (luz do sol ou luz de cabine 5000K–6500K):
 
 1. **Observe a chapa em ângulo rasante (45° e 110° — Flop)** comparando com a peça de referência do carro.
-2. Na sessão de ajuste, clique em **"Diagnosticar matiz"** (ou abra a **Bússola Cromática** em `/compass`).
+2. Na sessão de ajuste, clique em **"Diagnosticar matiz"** (ou abra a **Bússola da Colorimetria** em `/compass`).
+
+> **Como a bússola funciona.** O disco tem doze posições: os quatro tons fundamentais (amarelo, azul, vermelho e verde) e, ao lado de cada um, as suas duas direções de subtom. Selecionar um tom fundamental escolhe apenas a família e oferece os dois subtons válidos — nenhuma correção é indicada nesse passo. Selecionar um subtom resolve a regra da sua oficina e mostra todos os pigmentos de corte, com "ou" para alternativas e "+" para combinações obrigatórias. O que gira é a sua seleção dentro do disco: nenhuma peça é girada e nenhuma consulta altera massa, fórmula ou histórico. O segundo disco, com a identidade gráfica, é apresentado abaixo apenas como reprodução da referência; sua mecânica não está documentada. As inscrições miúdas dentro do disco reproduzem a arte impressa — a recomendação válida é sempre a do painel ao lado.
 3. **Identifique o Tom Principal (1º Passo):**
    - A cor pertence obrigatoriamente a um dos 4 fundamentos:
      - 🟡 **Amarelo**
@@ -157,7 +161,7 @@ Com a primeira chapa seca sob iluminação controlada (luz do sol ou luz de cabi
 
 | Tela | O que você encontra |
 |---|---|
-| **Bússola Cromática** (`/compass`) | Mostrador 360° interativo e arrastável. Permite girar a agulha, alternar entre modo Ângulo/Frente e consultar as regras de corte a qualquer momento. |
+| **Bússola da Colorimetria** (`/compass`) | Disco com doze posições: 4 tons fundamentais e 8 direções de subtom. Selecione clicando, arrastando ou pelo teclado; o painel mostra os pigmentos de corte da regra vigente. O seletor Ângulo/Frente registra a vista avaliada e não muda a regra. |
 | **Banco de Cores** (`/bank`) | Acervo de todas as fórmulas já acertadas e aprovadas pela oficina, com pesquisa rápida por código, cor ou modelo. |
 | **Biblioteca de Pigmentos** (`/pigments`) | Lista completa de bases, tipos de pigmento e fabricantes cadastrados. |
 | **Histórico de Ajustes** (`/history`) | Rastreabilidade total de cada iteração, massa consumida e auditoria de pesagem. |

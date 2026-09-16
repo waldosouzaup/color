@@ -1,24 +1,29 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import type {
-  CorrectionRule,
-  ObservationView,
-} from "@/domain/colorimetry/types";
+import type { CorrectionRule, ObservationView } from "@/domain/colorimetry/types";
 import { toneLabels, directionLabels } from "@/domain/colorimetry/tones";
 import { Dialog, Alert } from "@/components/ui";
-import { Compass, ruleAngles } from "@/components/compass";
-import { CompassDiagnosis, CompassShelf } from "@/components/compass-panels";
+import { Compass } from "@/components/compass";
+import {
+  CompassDiagnosis,
+  CompassShelf,
+  ObservationModeBar,
+} from "@/components/compass-panels";
+import {
+  canUseInAdjustment,
+  resolveSelection,
+  type CompassSelection,
+} from "@/domain/compass/selection";
 
 /**
- * Versão ampliada da Bússola Cromática: o mesmo instrumento em escala xl,
- * com o diagnóstico da chapa ao lado e a régua das 8 direções no rodapé.
- * O estado (regra ativa e modo de vista) vive no chamador, então abrir e
- * fechar o modal nunca perde a leitura em curso.
+ * Mostrador ampliado: o mesmo instrumento em escala xl, com a leitura ao lado.
+ * O estado (posição e vista) vive no chamador, então abrir e fechar o modal
+ * nunca perde a consulta em curso.
  */
 export function CompassModal({
   rules,
-  selected,
+  selection,
   onSelect,
   viewMode,
   onViewModeChange,
@@ -26,79 +31,88 @@ export function CompassModal({
   onUse,
 }: {
   rules: CorrectionRule[];
-  selected?: CorrectionRule;
-  onSelect: (rule: CorrectionRule) => void;
+  selection: CompassSelection;
+  onSelect: (selection: CompassSelection) => void;
   viewMode: ObservationView;
   onViewModeChange: (mode: ObservationView) => void;
   close: () => void;
   onUse?: () => void;
 }) {
-  const angle = selected
-    ? (ruleAngles[`${selected.mainTone}:${selected.direction}`] ?? 0)
-    : 0;
+  const resolution = resolveSelection(rules, selection);
+  const usable = canUseInAdjustment(resolution);
 
   return (
-    <Dialog
-      size="wide"
-      title="Bússola Cromática de Alta Precisão"
-      close={close}
-    >
+    <Dialog size="wide" title="Bússola da Colorimetria" close={close}>
       <div className="compass-modal-layout">
         <div className="compass-modal-dial">
           <Compass
             size="xl"
             rules={rules}
-            selected={selected?.id}
+            selection={selection}
             onSelect={onSelect}
-            viewMode={viewMode}
-            onViewModeChange={onViewModeChange}
           />
+          <ObservationModeBar mode={viewMode} onChange={onViewModeChange} />
         </div>
 
-        {selected && (
-          <div className="compass-modal-side">
-            <div className="result-header">
-              <span className="eyebrow">DIAGNÓSTICO DA CHAPA</span>
-              <h2>{selected.diagnosisLabel}</h2>
-              <span className="tone-quadrant-badge">
-                Tom {toneLabels[selected.mainTone]} · Direção{" "}
-                {directionLabels[selected.direction]} · {angle.toFixed(1)}°
-              </span>
-            </div>
-
-            <hr />
-
-            <CompassDiagnosis rule={selected} />
-
-            <div className="result-footer">
-              <small className="result-source-meta">
-                {selected.source} · Regra v{selected.version}
-              </small>
-              {onUse && (
-                <button
-                  type="button"
-                  className="button primary w-full"
-                  disabled={!selected.active}
-                  onClick={onUse}
-                >
-                  Usar neste ajuste
-                  <ArrowRight size={17} />
-                </button>
-              )}
-              {!selected.active && (
-                <Alert error>Regra desativada pela oficina.</Alert>
-              )}
-            </div>
+        <div className="compass-modal-side">
+          <div className="result-header">
+            <span className="eyebrow">LEITURA DA POSIÇÃO</span>
+            <h2>
+              {resolution.status === "FAMILY"
+                ? toneLabels[resolution.mainTone]
+                : `${toneLabels[resolution.mainTone]} ${directionLabels[
+                    resolution.direction
+                  ].toLowerCase()}`}
+            </h2>
+            <span className="tone-quadrant-badge">
+              Tom {toneLabels[resolution.mainTone]}
+              {resolution.status !== "FAMILY" &&
+                ` · Direção ${directionLabels[resolution.direction]}`}
+            </span>
           </div>
-        )}
+
+          <hr />
+
+          <CompassDiagnosis resolution={resolution} onSelect={onSelect} />
+
+          <div className="result-footer">
+            {resolution.status === "RULE" && (
+              <small className="result-source-meta">
+                {resolution.rule.source} · Regra v{resolution.rule.version}
+              </small>
+            )}
+            {onUse && (
+              <button
+                type="button"
+                className="button primary w-full"
+                disabled={!usable}
+                onClick={onUse}
+              >
+                Usar neste ajuste
+                <ArrowRight size={17} />
+              </button>
+            )}
+            {resolution.status === "RULE" && !resolution.rule.active && (
+              <Alert error>
+                Regra desativada pela oficina: consulta permitida, uso bloqueado.
+              </Alert>
+            )}
+            {viewMode === "FRONT" && usable && (
+              <Alert>
+                A consulta está em Frente, mas o diagnóstico registrado é sempre
+                do ângulo.
+              </Alert>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="compass-modal-shelf">
         <CompassShelf
           rules={rules}
-          selected={selected}
+          selection={selection}
           onSelect={onSelect}
-          label="TROCAR DIREÇÃO SEM SAIR DO MOSTRADOR"
+          label="TROCAR A POSIÇÃO SEM SAIR DO MOSTRADOR"
         />
       </div>
     </Dialog>

@@ -10,7 +10,7 @@ Next.js App Router, React, TypeScript strict, componentes HTML acessíveis com C
 
 ```text
 app/           páginas e endpoints autenticados
-components/    componentes acessíveis e bússola SVG original
+components/    componentes acessíveis e a bússola em SVG (disco de doze posições)
 features/      bancada, formulários, diagnóstico, sessão e administração
 domain/        tipos, matriz, regras e matemática decimal sem React
 services/      casos de uso, autorização, validação e transações
@@ -81,6 +81,12 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
+⚠️ Os testes leem `BETTER_AUTH_URL` e `DATABASE_URL` do ambiente. Rode-os sempre
+com o arquivo de ambiente local (por exemplo `set -a; . ./.env.local-db; set +a`)
+e confira que `BETTER_AUTH_URL` aponta para o servidor de desenvolvimento em uso.
+Nunca execute testes, seed ou reset com essas variáveis apontando para produção —
+`reuseExistingServer` aproveita qualquer servidor já ouvindo naquela porta.
+
 Se Google Chrome estiver em `/usr/bin/google-chrome`, será usado automaticamente. Em outro ambiente, configure `PLAYWRIGHT_CHROMIUM_EXECUTABLE` ou deixe o Playwright usar o Chromium instalado. `BETTER_AUTH_URL` deve corresponder à porta do servidor. O Playwright inicia `pnpm dev` via npm quando não há servidor e reutiliza um servidor existente.
 
 O cenário E2E efetua login, cria uma fórmula de 500 g, seleciona metálica, registra chapa com fotografia, analisa AZUL → ESVERDEADO, verifica ausência de dosagem, adiciona 1 g, registra nova chapa, aprova frente/ângulo, busca no banco e reabre o histórico. Os registros E2E são claramente demonstrativos. Testes adicionais cobrem API inválida, origem externa e ausência de overflow em 375, 768, 1024 e 1440 px.
@@ -90,6 +96,8 @@ O cenário E2E efetua login, cria uma fórmula de 500 g, seleciona metálica, re
 ## Regras e dosagem
 
 O motor independente está em `domain/colorimetry/`. Seus testes cobrem as oito regras, combinações inválidas, alternativas/combinações, pesos acumulados e matemática de dosagem. Detalhes em [COLORIMETRY_DOMAIN.md](docs/COLORIMETRY_DOMAIN.md).
+
+A geometria da bússola fica em `domain/compass/`, também sem React: doze setores de 30°, quatro tons fundamentais e oito direções. O contrato visual, as medidas tiradas da referência e as divergências entre a arte impressa e a matriz estão em [BUSSOLA_VISUAL.md](docs/BUSSOLA_VISUAL.md).
 
 Recomendação quantitativa exige coeficiente VERIFIED, ativo, aprovado, não demonstrativo e correspondente à base, regra, sistema, tipo de tinta, organização e severidade. Sem ele, **DOSAGEM NÃO CALIBRADA** e adição manual. O exemplo 0,20 g / 100 g aparece apenas como fixture matemática. Não representa um coeficiente real.
 

@@ -38,6 +38,14 @@
   --code-bg: #edf3eb;
   --code-text: #3a5448;
   --modal-backdrop: rgba(18, 30, 24, 0.45);
+  /* Apelidos usados por painéis e bússola. Resolvem no tema ativo porque
+     apontam para tokens redefinidos no mesmo elemento. */
+  --panel-bg: var(--card-bg);
+  --panel-border: var(--line);
+  --surface-subtle: var(--card-hover);
+  --soft: var(--green-light);
+  --radius-md: var(--radius);
+  --shadow-sm: var(--shadow);
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   color: var(--ink);
@@ -426,28 +434,6 @@ svg {
   min-width: 38px;
   min-height: 38px;
   justify-content: center;
-}
-.compass-outer-ring {
-  fill: var(--surface);
-  stroke: var(--line);
-  transition: fill 0.2s, stroke 0.2s;
-}
-.compass-center-circle {
-  fill: var(--surface-raised);
-  stroke: var(--line);
-  transition: fill 0.2s, stroke 0.2s;
-}
-.compass-needle {
-  fill: var(--accent);
-}
-.compass-pin {
-  fill: var(--surface);
-}
-.compass-label-title {
-  fill: var(--ink);
-}
-.compass-label-sub {
-  fill: var(--muted);
 }
 .badge {
   display: inline-flex;
@@ -925,7 +911,7 @@ svg {
   text-align: center;
   margin: -15px 30px -15px 20px;
 }
-.hero-compass .compass {
+.hero-compass .compass-container {
   filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.08));
 }
 .hero-compass > span {
@@ -1513,7 +1499,6 @@ tfoot td {
   align-items: center;
   position: relative;
   user-select: none;
-  touch-action: none;
 }
 
 .compass-container.sm {
@@ -1524,41 +1509,100 @@ tfoot td {
   max-width: clamp(320px, calc(86dvh - 350px), 720px);
 }
 
+/* O disco impresso é claro nos dois temas; o entorno é que muda. O bloqueio de
+   gestos fica só no desenho, para a página continuar rolando pelos controles. */
 .compass-svg {
   width: 100%;
   height: auto;
   display: block;
-  cursor: grab;
-  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.4));
-  transition: transform 0.2s ease;
+  cursor: pointer;
+  touch-action: none;
+  border-radius: 50%;
+  filter: drop-shadow(0 10px 24px rgba(15, 23, 32, 0.28));
+}
+
+.compass-container.sm .compass-svg {
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 32, 0.18));
 }
 
 .compass-container.dragging .compass-svg {
   cursor: grabbing;
 }
 
-.compass-sphere-group {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-origin: center;
+.compass-svg:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
-.compass-sphere-group:hover circle:nth-of-type(2) {
-  filter: brightness(1.15) drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+/* Área de seleção de cada setor: invisível, mas presente para toque e mouse. */
+.compass-hit {
+  fill: transparent;
+  cursor: pointer;
 }
 
-.sphere-active-halo {
-  animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.compass-hit.active {
+  fill: rgba(255, 255, 255, 0.16);
 }
 
-@keyframes pulse-ring {
-  0%, 100% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.35;
-    transform: scale(1.05);
-  }
+/* Destaque discreto: contorno fino do setor, sem halo pulsante nem animação. */
+.compass-active-outline {
+  fill: none;
+  stroke: #123243;
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+/* Tamanhos proporcionais aos medidos na referência (≈0,029 R, 0,06 R e
+   0,021 R do raio externo), para o rótulo caber dentro do próprio setor. */
+.compass-label-direction {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  fill: #141a21;
+}
+
+.compass-label-tone {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  fill: #10161d;
+}
+
+.compass-label-art {
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: #1c2430;
+}
+
+.compass-label-art.strong {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.compass-label-letter {
+  font-size: 24px;
+  font-weight: 900;
+  fill: #0d1218;
+}
+
+.compass-container.sm .compass-label-direction,
+.compass-container.sm .compass-label-tone {
+  display: none;
+}
+
+/* Leitura textual da posição, fora dos rótulos minúsculos do SVG. */
+.compass-live {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+  max-width: 460px;
+}
+
+.compass-container.sm .compass-live {
+  display: none;
 }
 
 /* Barra de Alternância do Modo de Avaliação (1º Ângulo vs 2º Frente) */
@@ -1735,8 +1779,9 @@ tfoot td {
   .compass-container.xl {
     max-width: 520px;
   }
-  /* Abaixo disso o dial encolhe demais e os numerais viram ruido ilegivel */
-  .compass-degree-tick {
+  /* Abaixo disso as inscrições miúdas da arte viram ruído ilegível; o texto
+     completo continua disponível no painel de leitura. */
+  .compass-label-art {
     display: none;
   }
 }
@@ -2047,6 +2092,156 @@ tfoot td {
 
 .choice-sphere.green.bluish {
   background: radial-gradient(circle at 35% 30%, #99f6e4 0%, #14b8a6 40%, #134e4a 100%);
+}
+
+/* Frase operacional inequívoca, repetida em página, modal e diagnóstico. */
+.cutting-summary {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.cutting-connector {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.cutting-card.support {
+  border-left: 3px solid var(--muted);
+}
+
+/* Quatro tons fundamentais: selecionam família, sem produzir correção. */
+.compass-family-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.family-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+}
+
+.family-card:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.family-card.selected {
+  border-color: var(--accent);
+  background: var(--green-light);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.family-card small {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.family-sphere {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow: inset -2px -3px 6px rgba(0, 0, 0, 0.35), inset 2px 2px 4px rgba(255, 255, 255, 0.6);
+}
+
+.family-sphere.yellow {
+  background: radial-gradient(circle at 36% 30%, #fdf0a0 0%, #f4cd27 45%, #c08c12 100%);
+}
+.family-sphere.blue {
+  background: radial-gradient(circle at 36% 30%, #4e8fd0 0%, #1857a7 45%, #083564 100%);
+}
+.family-sphere.red {
+  background: radial-gradient(circle at 36% 30%, #eb484d 0%, #d7181f 45%, #8d0a11 100%);
+}
+.family-sphere.green {
+  background: radial-gradient(circle at 36% 30%, #5c8239 0%, #456a24 45%, #284311 100%);
+}
+
+.choice-card.unavailable {
+  opacity: 0.72;
+}
+
+.choice-card.unavailable .choice-dir {
+  color: var(--error-text);
+}
+
+.compass-direction-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Segundo disco: apresentado separado, como na referência. */
+.compass-second-disc {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.compass-second-disc .muted {
+  font-size: 12px;
+  line-height: 1.55;
+  max-width: 620px;
+  text-align: center;
+}
+
+.compass-identity {
+  width: 100%;
+  max-width: 420px;
+}
+
+.compass-identity.sm {
+  max-width: 220px;
+}
+
+.compass-identity-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 20px rgba(15, 23, 32, 0.22));
+}
+
+.compass-identity-title {
+  font-size: 58px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  fill: #ffffff;
+}
+
+.compass-identity-subtitle {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  fill: #7cc6f0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compass-svg,
+  .compass-hit,
+  .family-card,
+  .choice-card {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* Modal de Princípio de Oposição e Riscos de Contaminação (03.jpeg) */
@@ -3075,7 +3270,7 @@ tfoot td {
   .compass-layout {
     grid-template-columns: 1fr;
   }
-  .compass-panel .compass {
+  .compass-panel .compass-container {
     max-width: 410px;
   }
   .compass-result .button {
@@ -3187,7 +3382,7 @@ tfoot td {
   .compass-layout {
     grid-template-columns: 1fr;
   }
-  .compass-panel .compass {
+  .compass-panel .compass-container {
     max-width: 400px;
   }
   .login-page {
@@ -3652,8 +3847,10 @@ tfoot td {
   }
 }
 @media (max-width: 390px) {
-  .compass-panel .compass text {
-    font-size: 0;
+  /* Em telas muito estreitas, some só a inscrição miúda da arte: o rótulo do
+     subtom e o painel de leitura continuam visíveis. */
+  .compass-panel .compass-label-art {
+    display: none;
   }
   .panel-grid {
     grid-template-columns: 1fr;

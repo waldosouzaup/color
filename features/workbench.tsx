@@ -38,7 +38,18 @@ import {
 import { Heading, Badge, Empty, Alert, Dialog } from "@/components/ui";
 import { Compass } from "@/components/compass";
 import { CompassModal } from "@/components/compass-modal";
-import { CompassDiagnosis, CompassShelf } from "@/components/compass-panels";
+import { CompassIdentityDisc } from "@/components/compass-identity-disc";
+import {
+  CompassDiagnosis,
+  CompassShelf,
+  ObservationModeBar,
+} from "@/components/compass-panels";
+import {
+  canUseInAdjustment,
+  resolveSelection,
+  type CompassSelection,
+} from "@/domain/compass/selection";
+import type { ObservationView } from "@/domain/colorimetry/types";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FormulaForm, FormulaTable } from "./formula-form";
 import { SessionView } from "./session";
@@ -54,7 +65,7 @@ import { toneLabels, directionLabels } from "@/domain/colorimetry/tones";
 const nav = [
   { href: "/", label: "Visão geral", icon: LayoutDashboard },
   { href: "/sessions", label: "Meus ajustes", icon: FlaskConical },
-  { href: "/compass", label: "Bússola cromática", icon: CompassIcon },
+  { href: "/compass", label: "Bússola da Colorimetria", icon: CompassIcon },
   { href: "/bank", label: "Banco de Cores", icon: Library },
   { href: "/formulas", label: "Fórmulas", icon: Files },
   { href: "/pigments", label: "Biblioteca de pigmentos", icon: BookOpen },
@@ -147,7 +158,9 @@ function Dashboard({ workspace }: { workspace: Workspace }) {
           <Compass
             size="sm"
             rules={workspace.rules}
+            selection={null}
             onSelect={() => router.push("/compass")}
+            onActivate={() => router.push("/compass")}
           />
           <span>QUATRO TONS. OITO DIREÇÕES.</span>
         </div>
@@ -315,12 +328,15 @@ function Dashboard({ workspace }: { workspace: Workspace }) {
   );
 }
 function CompassView({ workspace }: { workspace: Workspace }) {
-  const [selected, setSelected] = useState(
-    workspace.rules.find(
-      (r) => r.mainTone === "YELLOW" && r.direction === "REDISH",
-    ) || workspace.rules[0],
-  );
-  const [viewMode, setViewMode] = useState<"ANGLE" | "FRONT">("ANGLE");
+  // A posição é semântica (tom + subtom), não um id de regra: assim ela
+  // sobrevive à troca de versão e à desativação de uma regra da oficina.
+  const [selection, setSelection] = useState<CompassSelection>({
+    mainTone: "YELLOW",
+    direction: "REDISH",
+  });
+  const resolution = resolveSelection(workspace.rules, selection);
+  const usable = canUseInAdjustment(resolution);
+  const [viewMode, setViewMode] = useState<ObservationView>("ANGLE");
   const [choose, setChoose] = useState(false);
   const [showOpposition, setShowOpposition] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -330,8 +346,8 @@ function CompassView({ workspace }: { workspace: Workspace }) {
       <div className="compass-header-bar">
         <Heading
           eyebrow="MÉTODO DO MESTRE DA COLORIMETRIA"
-          title="Bússola Cromática de Alta Precisão"
-          description="Instrumento de diagnóstico visual para identificação do tom principal, direção do subtom e pigmentos de corte da Fórmula Secreta Semida."
+          title="Bússola da Colorimetria"
+          description="Doze posições: quatro tons fundamentais e oito direções de subtom. Consulte o pigmento de corte da regra vigente na sua oficina."
         />
         <div className="compass-header-actions">
           <button
@@ -358,9 +374,11 @@ function CompassView({ workspace }: { workspace: Workspace }) {
       <div className="compass-layout">
         <section className="panel compass-panel">
           <div className="compass-panel-header">
-            <span className="panel-subtitle">MOSTRADOR DINÂMICO 360°</span>
+            <span className="panel-subtitle">DISCO CROMÁTICO · DOZE POSIÇÕES</span>
             <div className="panel-header-right">
-              <span className="panel-hint">Arraste o dial ou clique nas esferas</span>
+              <span className="panel-hint">
+                Clique, arraste ou use as setas do teclado
+              </span>
               <button
                 type="button"
                 className="icon-button"
@@ -375,11 +393,11 @@ function CompassView({ workspace }: { workspace: Workspace }) {
 
           <Compass
             rules={workspace.rules}
-            selected={selected?.id}
-            onSelect={setSelected}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            selection={selection}
+            onSelect={setSelection}
           />
+
+          <ObservationModeBar mode={viewMode} onChange={setViewMode} />
 
           <div className="compass-method-callout">
             {viewMode === "ANGLE" ? (
@@ -405,48 +423,84 @@ function CompassView({ workspace }: { workspace: Workspace }) {
         </section>
 
         <section className="panel compass-result">
-          {selected && (
-            <>
-              <div className="result-header">
-                <span className="eyebrow">DIAGNÓSTICO DA CHAPA</span>
-                <h2>{selected.diagnosisLabel}</h2>
-                <span className="tone-quadrant-badge">
-                  Tom {toneLabels[selected.mainTone]} · Direção {directionLabels[selected.direction]}
-                </span>
-              </div>
+          <div className="result-header">
+            <span className="eyebrow">LEITURA DA POSIÇÃO</span>
+            <h2>
+              {resolution.status === "FAMILY"
+                ? toneLabels[resolution.mainTone]
+                : `${toneLabels[resolution.mainTone]} ${directionLabels[
+                    resolution.direction
+                  ].toLowerCase()}`}
+            </h2>
+            <span className="tone-quadrant-badge">
+              Tom {toneLabels[resolution.mainTone]}
+              {resolution.status !== "FAMILY" &&
+                ` · Direção ${directionLabels[resolution.direction]}`}
+            </span>
+          </div>
 
-              <hr />
+          <hr />
 
-              <CompassDiagnosis rule={selected} />
+          <CompassDiagnosis resolution={resolution} onSelect={setSelection} />
 
-              <div className="result-footer">
-                <small className="result-source-meta">
-                  {selected.source} · Regra v{selected.version}
-                </small>
+          <div className="result-footer">
+            {resolution.status === "RULE" && (
+              <small className="result-source-meta">
+                {resolution.rule.source} · Regra v{resolution.rule.version}
+              </small>
+            )}
 
-                <button
-                  className="button primary w-full"
-                  disabled={!selected.active}
-                  onClick={() => setChoose(true)}
-                >
-                  Usar neste ajuste
-                  <ArrowRight size={17} />
-                </button>
+            <button
+              className="button primary w-full"
+              disabled={!usable}
+              onClick={() => setChoose(true)}
+            >
+              Usar neste ajuste
+              <ArrowRight size={17} />
+            </button>
 
-                {!selected.active && (
-                  <Alert error>Regra desativada pela oficina.</Alert>
-                )}
-              </div>
-            </>
-          )}
+            {resolution.status === "RULE" && !resolution.rule.active && (
+              <Alert error>
+                Regra desativada pela oficina: consulta permitida, uso
+                bloqueado.
+              </Alert>
+            )}
+            {viewMode === "FRONT" && usable && (
+              <Alert>
+                A consulta está em Frente. O diagnóstico registrado no ajuste
+                continua sendo o do ângulo.
+              </Alert>
+            )}
+          </div>
         </section>
       </div>
 
       <CompassShelf
         rules={workspace.rules}
-        selected={selected}
-        onSelect={setSelected}
+        selection={selection}
+        onSelect={setSelection}
       />
+
+      <section className="panel compass-second-disc">
+        <div className="section-title">
+          <div>
+            <h2>Segundo disco da referência</h2>
+            <p>
+              Reproduzido como aparece na imagem: dois quadrantes com a
+              identidade gráfica e dois quadrantes claros divididos em três
+              setores.
+            </p>
+          </div>
+        </div>
+        <CompassIdentityDisc />
+        <p className="muted">
+          A imagem não demonstra se este disco é máscara, capa, verso ou peça
+          móvel, nem qual camada gira. Enquanto não houver fonte que confirme a
+          mecânica, ele é apresentado separado do disco cromático e a consulta
+          interativa acontece no disco de cima. A arte de marca é uma
+          aproximação em vetor.
+        </p>
+      </section>
 
       {showOpposition && (
         <Dialog
@@ -511,8 +565,8 @@ function CompassView({ workspace }: { workspace: Workspace }) {
       {expanded && (
         <CompassModal
           rules={workspace.rules}
-          selected={selected}
-          onSelect={setSelected}
+          selection={selection}
+          onSelect={setSelection}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           close={() => setExpanded(false)}
@@ -523,7 +577,7 @@ function CompassView({ workspace }: { workspace: Workspace }) {
         />
       )}
 
-      {choose && selected && (
+      {choose && resolution.status === "RULE" && usable && (
         <Dialog
           title="Escolha o ajuste em andamento"
           close={() => setChoose(false)}
@@ -534,7 +588,7 @@ function CompassView({ workspace }: { workspace: Workspace }) {
               .map((s) => (
                 <Link
                   key={s.id}
-                  href={`/sessions/${s.id}?diagnosis=${selected.mainTone}.${selected.direction}`}
+                  href={`/sessions/${s.id}?diagnosis=${resolution.mainTone}.${resolution.direction}`}
                   className="button secondary"
                 >
                   {s.formula.colorCode} · {s.formula.description}

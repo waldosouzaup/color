@@ -2,7 +2,9 @@
 
 ## Origem e precedência
 
-Regras operacionais extraídas do arquivo `AULA 42 PT METODO DO MESTRE DA COLORIMETRIA LTDA.docx`, conferidas com o pedido do produto. O `Livro-de-Colorimetria.pdf` complementa iluminação, metameria, aplicação e comportamentos por vista. As imagens servem de referência conceitual; a interface usa desenhos próprios em SVG/CSS e não incorpora marcas ou artes dos anexos.
+Regras operacionais extraídas do arquivo `AULA 42 PT METODO DO MESTRE DA COLORIMETRIA LTDA.docx`, conferidas com o pedido do produto. O `Livro-de-Colorimetria.pdf` complementa iluminação, metameria, aplicação e comportamentos por vista.
+
+A bússola da interface **reproduz a composição de `aplicativo.jpeg`**: doze setores, esferas, rótulos, pigmentos internos, setas e pivô, redesenhados em SVG a partir de medição da imagem. A orientação anterior, que limitava as imagens a referência conceitual, valia para o desenho genérico anterior e não descreve mais o objetivo. O que permanece é a precedência: **arte não substitui matriz**. Inscrições da arte que divergem da matriz estão listadas em [BUSSOLA_VISUAL.md](BUSSOLA_VISUAL.md) e não alteram pigmento, combinação ou dose. A arte de marca dos anexos não é incorporada; os nomes do produto aparecem em vetor.
 
 O manual usa quatro famílias como uma classificação operacional do método. Isso não é apresentado como uma taxonomia científica universal da cor. Divergências da arte da bússola não substituem a precedência do manual.
 

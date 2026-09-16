@@ -537,10 +537,12 @@ export function HelpView() {
           <div className="help-callout">
             <Compass size={22} />
             <div>
-              <strong>Deseja visualizar no mostrador interativo 360°?</strong>
+              <strong>Deseja consultar no disco interativo?</strong>
               <p>
-                A Bússola Cromática permite girar a agulha de diagnóstico, alternar entre
-                os modos Ângulo e Frente e inspecionar os graus de desvio dinamicamente.
+                A Bússola da Colorimetria tem doze posições: quatro tons
+                fundamentais e oito direções de subtom. Escolha pelo disco, pelos
+                botões ou pelo teclado; o painel mostra os pigmentos de corte da
+                regra vigente na sua oficina.
               </p>
             </div>
             <Link href="/compass" className="button primary">
@@ -662,10 +664,10 @@ export function HelpView() {
               <div className="help-tool-icon">
                 <Compass size={24} />
               </div>
-              <h4>Bússola Cromática (/compass)</h4>
+              <h4>Bússola da Colorimetria (/compass)</h4>
               <p>
-                Mostrador 360° interativo para visualização dos 4 tons, graus de desvio e
-                regras da Fórmula Secreta Semida.
+                Disco interativo com os 4 tons fundamentais, as 8 direções de
+                subtom e os pigmentos de corte da regra vigente.
               </p>
               <Link href="/compass" className="button secondary small">
                 Abrir Bússola <ArrowRight size={14} />

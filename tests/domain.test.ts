@@ -103,21 +103,38 @@ describe("pesagem decimal", () => {
   });
 });
 
-describe("bússola cromática (geometria e mapeamento)", () => {
-  it("mapeia as 8 direções fundamentais com ângulos precisos de 0 a 360", async () => {
-    const { ruleAngles, cardinalTones } = await import("../components/compass");
-    expect(Object.keys(ruleAngles)).toHaveLength(8);
-    expect(ruleAngles["YELLOW:REDISH"]).toBe(22.5);
-    expect(ruleAngles["BLUE:REDISH"]).toBe(67.5);
-    expect(ruleAngles["BLUE:GREENISH"]).toBe(112.5);
-    expect(ruleAngles["RED:YELLOWISH"]).toBe(157.5);
-    expect(ruleAngles["RED:BLUISH"]).toBe(202.5);
-    expect(ruleAngles["GREEN:BLUISH"]).toBe(247.5);
-    expect(ruleAngles["GREEN:YELLOWISH"]).toBe(292.5);
-    expect(ruleAngles["YELLOW:GREENISH"]).toBe(337.5);
+describe("bússola cromática", () => {
+  // A distribuição antiga (oito posições de 45° a partir de 22,5°) não existe
+  // mais: o instrumento tem doze setores de 30° e a geometria mora no domínio,
+  // fora do React. A cobertura detalhada está em `tests/compass.test.ts`.
+  it("expõe a geometria no domínio, com doze setores e oito regras", async () => {
+    const { compassSectors, directionSectors, toneSectors } = await import(
+      "../domain/compass/geometry"
+    );
+    expect(compassSectors).toHaveLength(12);
+    expect(toneSectors).toHaveLength(4);
+    expect(directionSectors.map((s) => s.ruleKey).sort()).toEqual(
+      [
+        "BLUE:GREENISH",
+        "BLUE:REDISH",
+        "GREEN:BLUISH",
+        "GREEN:YELLOWISH",
+        "RED:BLUISH",
+        "RED:YELLOWISH",
+        "YELLOW:GREENISH",
+        "YELLOW:REDISH",
+      ].sort(),
+    );
+    expect(compassSectors.map((s) => s.center)).toEqual([
+      15, 45, 75, 105, 135, 165, 195, 225, 255, 285, 315, 345,
+    ]);
+  });
 
-    expect(cardinalTones).toHaveLength(4);
-    expect(cardinalTones.map((c) => c.tone)).toEqual(["YELLOW", "BLUE", "RED", "GREEN"]);
+  it("não depende de React para calcular posições", async () => {
+    const source = await import("node:fs/promises").then((fs) =>
+      fs.readFile("domain/compass/geometry.ts", "utf8"),
+    );
+    expect(source).not.toMatch(/from "react"/);
   });
 });
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { ArrowRight, ArrowLeft, Check, Scale } from "lucide-react";
 import { Field, Alert } from "@/components/ui";
+import { CompassOutputs } from "@/components/compass-panels";
 import {
   toneLabels,
   directionLabels,
@@ -295,21 +296,7 @@ export function Diagnosis({
                 </span>
                 <h2>{rule.diagnosisLabel}</h2>
                 <p>Correção de matiz indicada</p>
-                <div className="correction-output">
-                  {rule.outputs.map((o, i) => (
-                    <span key={o.pigmentCharacteristic}>
-                      {i > 0 && (
-                        <small>{o.role === "ALTERNATIVE" ? "ou" : "+"}</small>
-                      )}
-                      <span
-                        className={`pigment-dot ${o.pigmentCharacteristic.toLowerCase()}`}
-                      />
-                      <span>{pigmentLabels[o.pigmentCharacteristic]}</span>
-                      {o.role === "SUPPORT" && <small>opcional</small>}
-                    </span>
-                  ))}
-                </div>
-                <p>{rule.notes}</p>
+                <CompassOutputs rule={rule} />
                 <small>
                   Regra{" "}
                   {rule.id.startsWith("rule-")

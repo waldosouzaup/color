@@ -1,693 +1,605 @@
 "use client";
 
-import React, { useRef, useState, useCallback, useMemo } from "react";
-import type { CorrectionRule, PrimaryTone } from "@/domain/colorimetry/types";
-import { toneLabels, directionLabels, pigmentLabels } from "@/domain/colorimetry/tones";
+import React, { useCallback, useId, useMemo, useRef, useState } from "react";
+import type { CorrectionRule } from "@/domain/colorimetry/types";
+import { toneLabels, directionLabels } from "@/domain/colorimetry/tones";
+import {
+  SECTOR_COUNT,
+  angleOfPoint,
+  annularSectorPath,
+  compassRatios,
+  compassSectors,
+  layout,
+  polarToCartesian,
+  sectorAt,
+  sectorFor,
+  textRotation,
+  wedgePath,
+  type CompassSector,
+} from "@/domain/compass/geometry";
+import {
+  artInk,
+  artPivot,
+  sectorArtwork,
+  sectorBackgrounds,
+  sectorSpheres,
+  type ArtSphereStyle,
+} from "@/domain/compass/artwork";
+import {
+  resolveSelection,
+  selectionSummary,
+  type CompassSelection,
+} from "@/domain/compass/selection";
 
-// Escalas do instrumento: sm (miniatura do hero), md (painel da pagina), xl (modal ampliado)
+/** sm = miniatura, md = página, xl = mostrador ampliado. */
 export type CompassSize = "sm" | "md" | "xl";
 
 export interface CompassProps {
   rules: CorrectionRule[];
-  selected?: string;
-  onSelect: (rule: CorrectionRule) => void;
+  selection: CompassSelection | null;
+  onSelect: (selection: CompassSelection) => void;
   size?: CompassSize;
-  viewMode?: "ANGLE" | "FRONT";
-  onViewModeChange?: (mode: "ANGLE" | "FRONT") => void;
+  /** Miniatura apenas apresenta o instrumento e delega o clique. */
+  onActivate?: () => void;
 }
 
-// 8 Direções do Método Semida e seus respectivos ângulos no mostrador de 360° (0° = 12h / Norte)
-export const ruleAngles: Record<string, number> = {
-  "YELLOW:REDISH": 22.5,
-  "BLUE:REDISH": 67.5,
-  "BLUE:GREENISH": 112.5,
-  "RED:YELLOWISH": 157.5,
-  "RED:BLUISH": 202.5,
-  "GREEN:BLUISH": 247.5,
-  "GREEN:YELLOWISH": 292.5,
-  "YELLOW:GREENISH": 337.5,
-};
+const VIEW = 1000;
+const CX = VIEW / 2;
+const CY = VIEW / 2;
+const RADIUS = 468;
+const L = layout(CX, CY, RADIUS);
 
-// 4 Tons Fundamentais Cardeais (0°, 90°, 180°, 270°)
-export const cardinalTones = [
-  { tone: "YELLOW" as PrimaryTone, label: "AMARELO", angle: 0, color: "#facc15", darkColor: "#ca8a04" },
-  { tone: "BLUE" as PrimaryTone, label: "AZUL", angle: 90, color: "#3b82f6", darkColor: "#1d4ed8" },
-  { tone: "RED" as PrimaryTone, label: "VERMELHO", angle: 180, color: "#ef4444", darkColor: "#b91c1c" },
-  { tone: "GREEN" as PrimaryTone, label: "VERDE", angle: 270, color: "#10b981", darkColor: "#047857" },
-];
+/** Orientação dos nomes de família, medida setor a setor na referência. */
+const toneLabelSpin: Record<number, number> = { 0: -90, 3: 90, 6: 90, 9: 90 };
 
-function polarToCartesian(cx: number, cy: number, radius: number, angleDegrees: number) {
-  const rad = ((angleDegrees - 90) * Math.PI) / 180;
-  return {
-    x: cx + radius * Math.cos(rad),
-    y: cy + radius * Math.sin(rad),
-  };
+function sameSelection(a: CompassSelection | null, b: CompassSelection | null) {
+  return (
+    a?.mainTone === b?.mainTone && (a?.direction ?? null) === (b?.direction ?? null)
+  );
+}
+
+function selectionOfSector(sector: CompassSector): CompassSelection {
+  return { mainTone: sector.mainTone, direction: sector.direction ?? null };
+}
+
+/** Esfera com volume e reflexo, como as da chapa impressa. */
+function Sphere({
+  x,
+  y,
+  r,
+  gradient,
+}: {
+  x: number;
+  y: number;
+  r: number;
+  gradient: string;
+}) {
+  return (
+    <g pointerEvents="none">
+      <ellipse
+        cx={x}
+        cy={y + r * 0.92}
+        rx={r * 0.82}
+        ry={r * 0.22}
+        fill="rgba(23,28,38,0.22)"
+      />
+      <circle cx={x} cy={y} r={r} fill={`url(#${gradient})`} />
+      <ellipse
+        cx={x - r * 0.3}
+        cy={y - r * 0.36}
+        rx={r * 0.22}
+        ry={r * 0.14}
+        transform={`rotate(-38 ${x - r * 0.3} ${y - r * 0.36})`}
+        fill="rgba(255,255,255,0.8)"
+      />
+    </g>
+  );
 }
 
 export function Compass({
   rules,
-  selected,
+  selection,
   onSelect,
   size = "md",
-  viewMode = "ANGLE",
-  onViewModeChange,
+  onActivate,
 }: CompassProps) {
-  // O viewBox e fixo em 500x500, entao a escala vem do container: sm/md/xl apenas
-  // trocam a largura maxima. `expanded` libera detalhes que nao cabem no dial pequeno.
-  const compact = size === "sm";
-  const expanded = size === "xl";
   const svgRef = useRef<SVGSVGElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [hoveredSector, setHoveredSector] = useState<string | null>(null);
+  const pointer = useRef<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const rawId = useId();
+  const uid = rawId.replace(/[^a-zA-Z0-9]/g, "");
 
-  // Mapeamento e ordenação estável das regras
-  const activeRule = useMemo(() => {
-    return rules.find((r) => r.id === selected) || rules[0];
-  }, [rules, selected]);
+  const compact = size === "sm";
+  const detailed = size === "xl";
+  const interactive = !compact;
 
-  const activeAngle = useMemo(() => {
-    if (!activeRule) return 0;
-    return ruleAngles[`${activeRule.mainTone}:${activeRule.direction}`] ?? 0;
-  }, [activeRule]);
+  const resolution = useMemo(
+    () => (selection ? resolveSelection(rules, selection) : null),
+    [rules, selection],
+  );
+  const summary = resolution
+    ? selectionSummary(resolution, {
+        tone: toneLabels,
+        direction: directionLabels,
+      })
+    : "Nenhuma posição selecionada.";
 
-  // Encontra a regra mais próxima com base em um ângulo de 0 a 360
-  const findClosestRule = useCallback(
-    (deg: number) => {
-      let normalized = deg % 360;
-      if (normalized < 0) normalized += 360;
+  const activeSector = selection
+    ? sectorFor(selection.mainTone, selection.direction)
+    : undefined;
 
-      let closestRule = rules[0];
-      let minDiff = 360;
+  /** Coordenadas do SVG a partir do ponteiro, respeitando escala e transformações. */
+  const pointOf = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const matrix = svg.getScreenCTM();
+    if (matrix && typeof DOMPoint === "function") {
+      const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+        matrix.inverse(),
+      );
+      return { x: point.x, y: point.y };
+    }
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * VIEW,
+      y: ((event.clientY - rect.top) / rect.height) * VIEW,
+    };
+  }, []);
 
-      for (const r of rules) {
-        const key = `${r.mainTone}:${r.direction}`;
-        const targetDeg = ruleAngles[key] ?? 0;
-        let diff = Math.abs(normalized - targetDeg);
-        if (diff > 180) diff = 360 - diff;
-        if (diff < minDiff) {
-          minDiff = diff;
-          closestRule = r;
-        }
-      }
-      return closestRule;
+  const commit = useCallback(
+    (sector: CompassSector) => {
+      const next = selectionOfSector(sector);
+      if (!sameSelection(next, selection)) onSelect(next);
     },
-    [rules],
+    [onSelect, selection],
   );
 
-  // Manipulador de arraste interativo
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (compact) return;
-    setIsDragging(true);
-    (e.target as Element).setPointerCapture?.(e.pointerId);
-    handlePointerMove(e);
-  };
+  const selectAtPointer = useCallback(
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      const point = pointOf(event);
+      if (!point) return;
+      const distance = Math.hypot(point.x - CX, point.y - CY);
+      // O pivô não seleciona: ali o ângulo é instável e a arte precisa continuar visível.
+      if (distance < L.pivot || distance > RADIUS) return;
+      commit(sectorAt(angleOfPoint(CX, CY, point.x, point.y)));
+    },
+    [commit, pointOf],
+  );
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging && e.type !== "click") return;
-    if (!svgRef.current) return;
-
-    const rect = svgRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-
-    // Converte coordenada cartesiana para ângulo com 0° no topo (12h)
-    let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
-    if (deg < 0) deg += 360;
-
-    const closest = findClosestRule(deg);
-    if (closest && closest.id !== activeRule?.id) {
-      onSelect(closest);
+  function handlePointerDown(event: React.PointerEvent<SVGSVGElement>) {
+    if (!interactive) {
+      onActivate?.();
+      return;
     }
-  };
+    if (pointer.current !== null) return; // um ponteiro por gesto
+    pointer.current = event.pointerId;
+    setDragging(true);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    // A seleção sai já no pointerdown, sem depender de estado assíncrono.
+    selectAtPointer(event);
+  }
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    setIsDragging(false);
-    (e.target as Element).releasePointerCapture?.(e.pointerId);
-  };
+  function handlePointerMove(event: React.PointerEvent<SVGSVGElement>) {
+    if (pointer.current !== event.pointerId) return;
+    selectAtPointer(event);
+  }
 
-  // Coordenadas centrais
-  const cx = 250;
-  const cy = 250;
+  function endGesture(event: React.PointerEvent<SVGSVGElement>) {
+    if (pointer.current !== event.pointerId) return;
+    pointer.current = null;
+    setDragging(false);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<SVGSVGElement>) {
+    if (!interactive) return;
+    const current = activeSector ? activeSector.index : 0;
+    const step =
+      event.key === "ArrowRight" || event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (step) {
+      event.preventDefault();
+      commit(compassSectors[(current + step + SECTOR_COUNT) % SECTOR_COUNT]);
+      return;
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      commit(compassSectors[event.key === "Home" ? 0 : SECTOR_COUNT - 1]);
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      commit(compassSectors[current]);
+    }
+  }
+
+  const gradientId = (key: string) => `sphere-${key}-${uid}`;
+  const artColors = useMemo(() => {
+    const map = new Map<string, ArtSphereStyle>();
+    for (const [key, art] of Object.entries(sectorArtwork))
+      art.pigments.forEach((pigment, index) =>
+        map.set(`${key.replace(/[^a-zA-Z]/g, "")}${index}`, pigment.color),
+      );
+    return map;
+  }, []);
 
   return (
-    <div className={`compass-container ${size} ${isDragging ? "dragging" : ""}`}>
+    <div className={`compass-container ${size} ${dragging ? "dragging" : ""}`}>
       <svg
         ref={svgRef}
-        viewBox="0 0 500 500"
+        viewBox={`0 0 ${VIEW} ${VIEW}`}
         className="compass-svg"
-        role="region"
-        aria-label="Bússola Cromática de Alta Precisão - Método do Mestre"
+        role="group"
+        aria-label={`Bússola da Colorimetria, doze posições. ${summary}`}
+        tabIndex={interactive ? 0 : -1}
         onPointerDown={handlePointerDown}
-        onPointerMove={isDragging ? handlePointerMove : undefined}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endGesture}
+        onPointerCancel={endGesture}
+        onLostPointerCapture={endGesture}
+        onKeyDown={handleKeyDown}
       >
         <defs>
-          {/* Sombra realista de contato das esferas */}
-          <filter id="sphere-shadow" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000000" floodOpacity="0.45" />
-          </filter>
-          <filter id="dial-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#000000" floodOpacity="0.35" />
-          </filter>
-          <filter id="glow-highlight" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-
-          {/* Gradientes Metálicos do Bisel Externo */}
-          <linearGradient id="bezel-metal" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#475569" />
-            <stop offset="25%" stopColor="#1e293b" />
-            <stop offset="50%" stopColor="#64748b" />
-            <stop offset="75%" stopColor="#0f172a" />
-            <stop offset="100%" stopColor="#334155" />
-          </linearGradient>
-
-          <radialGradient id="inner-dial-grad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="var(--panel-bg, #121620)" />
-            <stop offset="75%" stopColor="var(--panel-border, #1a2232)" />
-            <stop offset="100%" stopColor="#090d16" />
-          </radialGradient>
-
-          {/* Gradientes 3D para as Esferas do Método Semida */}
-          {/* Amarelo Puro */}
-          <radialGradient id="sphere-yellow-pure" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#fef08a" />
-            <stop offset="35%" stopColor="#facc15" />
-            <stop offset="75%" stopColor="#ca8a04" />
-            <stop offset="100%" stopColor="#854d0e" />
-          </radialGradient>
-          {/* Amarelo Avermelhado */}
-          <radialGradient id="sphere-yellow-redish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#fed7aa" />
-            <stop offset="35%" stopColor="#f97316" />
-            <stop offset="75%" stopColor="#c2410c" />
-            <stop offset="100%" stopColor="#7c2d12" />
-          </radialGradient>
-          {/* Amarelo Esverdeado (Limão) */}
-          <radialGradient id="sphere-yellow-greenish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#fef9c3" />
-            <stop offset="35%" stopColor="#eab308" />
-            <stop offset="70%" stopColor="#84cc16" />
-            <stop offset="100%" stopColor="#4d7c0f" />
-          </radialGradient>
-
-          {/* Azul Puro */}
-          <radialGradient id="sphere-blue-pure" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#93c5fd" />
-            <stop offset="35%" stopColor="#3b82f6" />
-            <stop offset="75%" stopColor="#1d4ed8" />
-            <stop offset="100%" stopColor="#1e3a8a" />
-          </radialGradient>
-          {/* Azul Avermelhado (Cobalto / Violeta suave) */}
-          <radialGradient id="sphere-blue-redish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#c7d2fe" />
-            <stop offset="35%" stopColor="#6366f1" />
-            <stop offset="75%" stopColor="#4338ca" />
-            <stop offset="100%" stopColor="#312e81" />
-          </radialGradient>
-          {/* Azul Esverdeado (Ciano / Turquesa) */}
-          <radialGradient id="sphere-blue-greenish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#a5f3fc" />
-            <stop offset="35%" stopColor="#06b6d4" />
-            <stop offset="75%" stopColor="#0e7490" />
-            <stop offset="100%" stopColor="#164e63" />
-          </radialGradient>
-
-          {/* Vermelho Puro */}
-          <radialGradient id="sphere-red-pure" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#fca5a5" />
-            <stop offset="35%" stopColor="#ef4444" />
-            <stop offset="75%" stopColor="#b91c1c" />
-            <stop offset="100%" stopColor="#7f1d1d" />
-          </radialGradient>
-          {/* Vermelho Amarelado (Coral / Escarlate) */}
-          <radialGradient id="sphere-red-yellowish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#fed7aa" />
-            <stop offset="35%" stopColor="#fb923c" />
-            <stop offset="75%" stopColor="#ea580c" />
-            <stop offset="100%" stopColor="#9a3412" />
-          </radialGradient>
-          {/* Vermelho Azulado (Rubi / Magenta) */}
-          <radialGradient id="sphere-red-bluish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#fbcfe8" />
-            <stop offset="35%" stopColor="#ec4899" />
-            <stop offset="75%" stopColor="#be185d" />
-            <stop offset="100%" stopColor="#831843" />
-          </radialGradient>
-
-          {/* Verde Puro */}
-          <radialGradient id="sphere-green-pure" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#86efac" />
-            <stop offset="35%" stopColor="#10b981" />
-            <stop offset="75%" stopColor="#047857" />
-            <stop offset="100%" stopColor="#064e3b" />
-          </radialGradient>
-          {/* Verde Amarelado (Chartreuse / Pistache) */}
-          <radialGradient id="sphere-green-yellowish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#d9f99d" />
-            <stop offset="35%" stopColor="#84cc16" />
-            <stop offset="75%" stopColor="#4d7c0f" />
-            <stop offset="100%" stopColor="#365314" />
-          </radialGradient>
-          {/* Verde Azulado (Menta / Esmeralda Escuro) */}
-          <radialGradient id="sphere-green-bluish" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#99f6e4" />
-            <stop offset="35%" stopColor="#14b8a6" />
-            <stop offset="75%" stopColor="#0f766e" />
-            <stop offset="100%" stopColor="#134e4a" />
-          </radialGradient>
-
-          {/* Pigmentos de Corte Especiais */}
-          <radialGradient id="sphere-violet" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#e9d5ff" />
-            <stop offset="35%" stopColor="#a855f7" />
-            <stop offset="75%" stopColor="#7e22ce" />
-            <stop offset="100%" stopColor="#581c87" />
-          </radialGradient>
-          <radialGradient id="sphere-red-oxide" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#fdba74" />
-            <stop offset="35%" stopColor="#c2410c" />
-            <stop offset="75%" stopColor="#9a3412" />
-            <stop offset="100%" stopColor="#431407" />
-          </radialGradient>
-
-          {/* Faixa Diagonal Especular (Semelhante ao estilo do Método em 02.jpeg) */}
-          <linearGradient id="specular-band" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="42%" stopColor="#ffffff" stopOpacity="0.05" />
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.65" />
-            <stop offset="58%" stopColor="#ffffff" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-
-          {/* Gradiente da Agulha Usinada */}
-          <linearGradient id="needle-light" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f8fafc" />
-            <stop offset="50%" stopColor="#cbd5e1" />
-            <stop offset="100%" stopColor="#64748b" />
-          </linearGradient>
-          <linearGradient id="needle-gold" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#fef08a" />
-            <stop offset="50%" stopColor="#eab308" />
-            <stop offset="100%" stopColor="#a16207" />
-          </linearGradient>
+          {sectorSpheres.map((sphere, index) => (
+            <radialGradient
+              key={index}
+              id={gradientId(`s${index}`)}
+              cx="36%"
+              cy="30%"
+              r="72%"
+            >
+              <stop offset="0%" stopColor={sphere.light} />
+              <stop offset="45%" stopColor={sphere.mid} />
+              <stop offset="100%" stopColor={sphere.dark} />
+            </radialGradient>
+          ))}
+          {[...artColors].map(([key, color]) => (
+            <radialGradient
+              key={key}
+              id={gradientId(key)}
+              cx="36%"
+              cy="30%"
+              r="72%"
+            >
+              <stop offset="0%" stopColor={color.light} />
+              <stop offset="45%" stopColor={color.mid} />
+              <stop offset="100%" stopColor={color.dark} />
+            </radialGradient>
+          ))}
+          <marker
+            id={`arrow-${uid}`}
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="4"
+            markerHeight="4"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#141a21" />
+          </marker>
         </defs>
 
-        {/* 1. Bisel Externo de Instrumentação */}
-        <circle cx={cx} cy={cy} r={238} fill="url(#bezel-metal)" filter="url(#dial-shadow)" />
-        <circle cx={cx} cy={cy} r={228} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={2} />
-        <circle cx={cx} cy={cy} r={224} fill="url(#inner-dial-grad)" stroke="#090d16" strokeWidth={3} />
+        {/* Chapa impressa: clara nos dois temas, como o instrumento real */}
+        <circle cx={CX} cy={CY} r={RADIUS} fill="#ffffff" />
 
-        {/* 2. Divisões Quadrantes Coloridas no Fundo do Mostrador */}
-        {/* Quadrante Norte (Amarelo) */}
-        <path
-          d={`M${cx} ${cy} L${cx + 220 * Math.sin(Math.PI * 0.25)} ${cy - 220 * Math.cos(Math.PI * 0.25)} A220 220 0 0 0 ${cx - 220 * Math.sin(Math.PI * 0.25)} ${cy - 220 * Math.cos(Math.PI * 0.25)} Z`}
-          fill="rgba(250, 204, 21, 0.04)"
-        />
-        {/* Quadrante Leste (Azul) */}
-        <path
-          d={`M${cx} ${cy} L${cx + 220 * Math.sin(Math.PI * 0.75)} ${cy - 220 * Math.cos(Math.PI * 0.75)} A220 220 0 0 0 ${cx + 220 * Math.sin(Math.PI * 0.25)} ${cy - 220 * Math.cos(Math.PI * 0.25)} Z`}
-          fill="rgba(59, 130, 246, 0.04)"
-        />
-        {/* Quadrante Sul (Vermelho) */}
-        <path
-          d={`M${cx} ${cy} L${cx - 220 * Math.sin(Math.PI * 0.75)} ${cy + 220 * Math.cos(Math.PI * 0.75)} A220 220 0 0 0 ${cx + 220 * Math.sin(Math.PI * 0.75)} ${cy - 220 * Math.cos(Math.PI * 0.75)} Z`}
-          fill="rgba(239, 68, 68, 0.04)"
-        />
-        {/* Quadrante Oeste (Verde) */}
-        <path
-          d={`M${cx} ${cy} L${cx - 220 * Math.sin(Math.PI * 0.25)} ${cy - 220 * Math.cos(Math.PI * 0.25)} A220 220 0 0 0 ${cx - 220 * Math.sin(Math.PI * 0.75)} ${cy + 220 * Math.cos(Math.PI * 0.75)} Z`}
-          fill="rgba(16, 185, 129, 0.04)"
-        />
-
-        {/* 3. Escala Graduada de Graus (Marcas a cada 5° e 15°) */}
-        {Array.from({ length: 72 }).map((_, i) => {
-          const angle = i * 5;
-          const isMajor = angle % 45 === 0;
-          const isMedium = angle % 15 === 0 && !isMajor;
-          const r1 = 224;
-          const r2 = isMajor ? 208 : isMedium ? 214 : 218;
-          const p1 = polarToCartesian(cx, cy, r1, angle);
-          const p2 = polarToCartesian(cx, cy, r2, angle);
+        {compassSectors.map((sector) => {
+          const background = sectorBackgrounds[sector.index];
           return (
-            <line
-              key={angle}
-              x1={p1.x}
-              y1={p1.y}
-              x2={p2.x}
-              y2={p2.y}
-              stroke={isMajor ? "rgba(255,255,255,0.7)" : isMedium ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}
-              strokeWidth={isMajor ? 2.5 : isMedium ? 1.5 : 1}
-            />
-          );
-        })}
-
-        {/* 4. Rótulos Cardeais Principais (AMARELO, AZUL, VERMELHO, VERDE) */}
-        {cardinalTones.map((c) => {
-          const pos = polarToCartesian(cx, cy, expanded ? 178 : 196, c.angle);
-          return (
-            <g key={c.tone} className="compass-cardinal-label">
-              <text
-                x={pos.x}
-                y={pos.y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill={c.color}
-                fontSize={compact ? "9" : "11"}
-                fontWeight="900"
-                letterSpacing="1.5px"
-                className="select-none"
-              >
-                {c.label}
-              </text>
+            <g key={`bg-${sector.index}`} pointerEvents="none">
+              <path
+                d={annularSectorPath(
+                  CX,
+                  CY,
+                  L.innerRing,
+                  RADIUS,
+                  sector.start,
+                  sector.end,
+                )}
+                fill={background.outer}
+              />
+              <path
+                d={annularSectorPath(
+                  CX,
+                  CY,
+                  L.pivot * 0.6,
+                  L.innerRing,
+                  sector.start,
+                  sector.end,
+                )}
+                fill={background.inner}
+              />
             </g>
           );
         })}
 
-        {/* 4b. Numerais de Grau das 8 Direções — cabem apenas no mostrador ampliado */}
-        {expanded &&
-          Object.entries(ruleAngles).map(([key, angle]) => {
-            const pos = polarToCartesian(cx, cy, 188, angle);
+        {/* Divisórias radiais finas e anel interno */}
+        <g pointerEvents="none" stroke={artInk} fill="none">
+          {compassSectors.map((sector) => {
+            const from = polarToCartesian(CX, CY, L.pivot * 0.6, sector.start);
+            const to = polarToCartesian(CX, CY, RADIUS, sector.start);
             return (
-              <text
-                key={key}
-                x={pos.x}
-                y={pos.y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill="rgba(255,255,255,0.42)"
-                fontSize="7.5"
-                fontWeight="700"
-                className="compass-degree-tick select-none pointer-events-none"
-              >
-                {angle.toFixed(1)}°
-              </text>
+              <line
+                key={`div-${sector.index}`}
+                x1={from.x}
+                y1={from.y}
+                x2={to.x}
+                y2={to.y}
+                strokeWidth={2.6}
+              />
             );
           })}
+          <circle cx={CX} cy={CY} r={L.innerRing} strokeWidth={3.4} />
+          <circle cx={CX} cy={CY} r={RADIUS} strokeWidth={6} />
+        </g>
 
-        {/* 5. Trilho das Esferas de Direção (Raio = 158) */}
-        <circle cx={cx} cy={cy} r={158} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1} strokeDasharray="4 4" />
-
-        {/* 6. As 8 Esferas 3D das Direções do Método Semida */}
-        {rules.map((rule) => {
-          const key = `${rule.mainTone}:${rule.direction}`;
-          const angle = ruleAngles[key] ?? 0;
-          const pos = polarToCartesian(cx, cy, 158, angle);
-          const isSelected = activeRule?.id === rule.id;
-          const isHovered = hoveredSector === rule.id;
-          const sphereRadius = isSelected ? (compact ? 16 : 22) : (compact ? 13 : 18);
-
-          // Gradiente correspondente à direção
-          let gradId = "sphere-yellow-pure";
-          if (rule.mainTone === "YELLOW") {
-            gradId = rule.direction === "REDISH" ? "sphere-yellow-redish" : "sphere-yellow-greenish";
-          } else if (rule.mainTone === "BLUE") {
-            gradId = rule.direction === "REDISH" ? "sphere-blue-redish" : "sphere-blue-greenish";
-          } else if (rule.mainTone === "RED") {
-            gradId = rule.direction === "YELLOWISH" ? "sphere-red-yellowish" : "sphere-red-bluish";
-          } else if (rule.mainTone === "GREEN") {
-            gradId = rule.direction === "YELLOWISH" ? "sphere-green-yellowish" : "sphere-green-bluish";
-          }
-
-          const labelPos = polarToCartesian(
-            cx,
-            cy,
-            expanded ? (isSelected ? 112 : 116) : isSelected ? 122 : 126,
-            angle,
+        {/* Esferas e rótulos da banda externa */}
+        {compassSectors.map((sector) => {
+          const isTone = sector.kind === "TONE";
+          const geometry = isTone
+            ? compassRatios.toneSphere
+            : compassRatios.directionSphere;
+          const center = polarToCartesian(
+            CX,
+            CY,
+            RADIUS * geometry.distance,
+            sector.center,
           );
-
+          const labelAt = polarToCartesian(
+            CX,
+            CY,
+            RADIUS * compassRatios.directionLabel,
+            sector.center,
+          );
           return (
-            <g
-              key={rule.id}
-              className={`compass-sphere-group ${isSelected ? "active" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(rule);
-              }}
-              onMouseEnter={() => setHoveredSector(rule.id)}
-              onMouseLeave={() => setHoveredSector(null)}
-              cursor="pointer"
-              role="button"
-              tabIndex={0}
-              aria-label={rule.diagnosisLabel}
-              aria-pressed={isSelected}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect(rule);
-                }
-              }}
-            >
-              {/* Halo de foco quando selecionada */}
-              {isSelected && (
-                <circle
-                  cx={pos.x}
-                  cy={pos.y}
-                  r={sphereRadius + 7}
-                  fill="none"
-                  stroke="#38bdf8"
-                  strokeWidth={2.5}
-                  strokeDasharray="4 3"
-                  className="sphere-active-halo"
-                />
-              )}
-
-              {/* Sombra de Contato Tridimensional */}
-              <ellipse
-                cx={pos.x}
-                cy={pos.y + sphereRadius * 0.82}
-                rx={sphereRadius * 0.88}
-                ry={sphereRadius * 0.28}
-                fill="rgba(0,0,0,0.5)"
-                filter="url(#sphere-shadow)"
+            <g key={`outer-${sector.index}`} pointerEvents="none">
+              <Sphere
+                x={center.x}
+                y={center.y}
+                r={RADIUS * geometry.radius}
+                gradient={gradientId(`s${sector.index}`)}
               />
-
-              {/* Corpo 3D da Esfera */}
-              <circle
-                cx={pos.x}
-                cy={pos.y}
-                r={sphereRadius}
-                fill={`url(#${gradId})`}
-                stroke={isSelected ? "#ffffff" : "rgba(255,255,255,0.2)"}
-                strokeWidth={isSelected ? 2 : 0.75}
-              />
-
-              {/* Faixa Diagonal de Brilho Especular (Semelhante ao estilo do Método em 02.jpeg) */}
-              <g clipPath={`url(#sphere-clip-${rule.id})`}>
-                <rect
-                  x={pos.x - sphereRadius}
-                  y={pos.y - sphereRadius}
-                  width={sphereRadius * 2}
-                  height={sphereRadius * 2}
-                  fill="url(#specular-band)"
-                  transform={`rotate(-40, ${pos.x}, ${pos.y})`}
-                  pointerEvents="none"
-                />
-              </g>
-              <clipPath id={`sphere-clip-${rule.id}`}>
-                <circle cx={pos.x} cy={pos.y} r={sphereRadius} />
-              </clipPath>
-
-              {/* Ponto de Reflexo de Luz Superior Esquerda (Hotspot) */}
-              <ellipse
-                cx={pos.x - sphereRadius * 0.32}
-                cy={pos.y - sphereRadius * 0.34}
-                rx={sphereRadius * 0.24}
-                ry={sphereRadius * 0.14}
-                transform={`rotate(-35, ${pos.x - sphereRadius * 0.32}, ${pos.y - sphereRadius * 0.34})`}
-                fill="rgba(255,255,255,0.85)"
-                pointerEvents="none"
-              />
-
-              {/* Rótulo da Direção — duas linhas (tom + direção) no mostrador ampliado */}
-              {expanded ? (
-                <g className="select-none pointer-events-none">
-                  <text
-                    x={labelPos.x}
-                    y={labelPos.y - 5.5}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill={isSelected ? "#ffffff" : isHovered ? "#e2e8f0" : "#cbd5e1"}
-                    fontSize={isSelected ? "9.5" : "8.5"}
-                    fontWeight="800"
-                  >
-                    {toneLabels[rule.mainTone]}
-                  </text>
-                  <text
-                    x={labelPos.x}
-                    y={labelPos.y + 5.5}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill={isSelected ? "#38bdf8" : "#94a3b8"}
-                    fontSize={isSelected ? "8.5" : "7.5"}
-                    fontWeight={isSelected ? "700" : "600"}
-                  >
-                    {directionLabels[rule.direction]}
-                  </text>
+              {!isTone && !compact && (
+                <g
+                  transform={`rotate(${textRotation(sector.center, "along")} ${labelAt.x} ${labelAt.y})`}
+                >
+                  {sector.label.map((line, index) => (
+                    <text
+                      key={line}
+                      x={labelAt.x}
+                      y={labelAt.y + (index - (sector.label.length - 1) / 2) * 17}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      className="compass-label-direction"
+                    >
+                      {line}
+                    </text>
+                  ))}
                 </g>
-              ) : (
-                !compact && (
-                  <text
-                    x={labelPos.x}
-                    y={labelPos.y}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill={isSelected ? "#ffffff" : isHovered ? "#e2e8f0" : "#94a3b8"}
-                    fontSize={isSelected ? "9.5" : "8"}
-                    fontWeight={isSelected ? "800" : "600"}
-                    className="select-none pointer-events-none"
-                  >
-                    {directionLabels[rule.direction]}
-                  </text>
-                )
               )}
             </g>
           );
         })}
 
-        {/* 7. Lente Central / Volvelle Núcleo de Revelação da Fórmula */}
-        <circle cx={cx} cy={cy} r={88} fill="url(#inner-dial-grad)" stroke="#1e293b" strokeWidth={3} filter="url(#dial-shadow)" />
-        <circle cx={cx} cy={cy} r={84} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
+        {/* Banda interna: nome da família ou pigmentos da arte impressa */}
+        {compassSectors.map((sector) => {
+          if (sector.kind === "TONE") {
+            const at = polarToCartesian(
+              CX,
+              CY,
+              RADIUS * compassRatios.toneLabel,
+              sector.center,
+            );
+            if (compact) return null;
+            return (
+              <text
+                key={`tone-${sector.index}`}
+                x={at.x}
+                y={at.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                transform={`rotate(${sector.center + (toneLabelSpin[sector.index] ?? -90)} ${at.x} ${at.y})`}
+                className="compass-label-tone"
+                pointerEvents="none"
+              >
+                {sector.label[0]}
+              </text>
+            );
+          }
 
-        {/* Conteúdo Informativo Central: Direção e Corte */}
-        {activeRule && (
-          <g className="compass-center-info select-none pointer-events-none">
-            {/* Modo de Vista: ÂNGULO (Flop) vs FRENTE (Face) */}
-            <rect
-              x={cx - 46}
-              y={cy - 68}
-              width={92}
-              height={18}
-              rx={9}
-              fill={viewMode === "ANGLE" ? "rgba(245, 158, 11, 0.2)" : "rgba(56, 189, 248, 0.2)"}
-              stroke={viewMode === "ANGLE" ? "#f59e0b" : "#38bdf8"}
-              strokeWidth={1}
-            />
-            <text
-              x={cx}
-              y={cy - 56}
-              textAnchor="middle"
-              fill={viewMode === "ANGLE" ? "#fbbf24" : "#7dd3fc"}
-              fontSize="8"
-              fontWeight="900"
-              letterSpacing="1px"
-            >
-              {viewMode === "ANGLE" ? "1º ÂNGULO (FLOP)" : "2º FRENTE (FACE)"}
-            </text>
+          const art = sector.ruleKey ? sectorArtwork[sector.ruleKey] : undefined;
+          if (!art || compact) return null;
+          const distances =
+            art.pigments.length > 2
+              ? compassRatios.artSphere.distances
+              : compassRatios.artSphere.pair;
+          const artKey = sector.ruleKey!.replace(/[^a-zA-Z]/g, "");
 
-            {/* Nome do Tom e Subtom Ativo */}
-            <text x={cx} y={cy - 34} textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900">
-              {toneLabels[activeRule.mainTone]}
-            </text>
-            <text x={cx} y={cy - 20} textAnchor="middle" fill="#38bdf8" fontSize="10" fontWeight="700">
-              {directionLabels[activeRule.direction]}
-            </text>
+          return (
+            <g key={`art-${sector.index}`} pointerEvents="none">
+              {art.pigments.map((pigment, index) => {
+                const at = polarToCartesian(
+                  CX,
+                  CY,
+                  RADIUS * distances[index],
+                  sector.center,
+                );
+                const labelAt = polarToCartesian(
+                  CX,
+                  CY,
+                  RADIUS * (distances[index] - 0.075),
+                  sector.center,
+                );
+                return (
+                  <g key={pigment.inscription.join(" ")}>
+                    <Sphere
+                      x={at.x}
+                      y={at.y}
+                      r={RADIUS * compassRatios.artSphere.radius}
+                      gradient={gradientId(`${artKey}${index}`)}
+                    />
+                    {detailed && (
+                      <g
+                        transform={`rotate(${textRotation(sector.center, "along")} ${labelAt.x} ${labelAt.y})`}
+                      >
+                        {pigment.inscription.map((line, lineIndex) => (
+                          <text
+                            key={line}
+                            x={labelAt.x}
+                            y={
+                              labelAt.y +
+                              (lineIndex -
+                                (pigment.inscription.length - 1) / 2) *
+                                (pigment.emphasis ? 14 : 10)
+                            }
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            className={
+                              pigment.emphasis
+                                ? "compass-label-art strong"
+                                : "compass-label-art"
+                            }
+                          >
+                            {line}
+                          </text>
+                        ))}
+                      </g>
+                    )}
+                  </g>
+                );
+              })}
 
-            {/* Miniesfera 3D do Pigmento de Corte Principal no Centro */}
-            {activeRule.outputs[0] && (
-              <g>
-                <ellipse cx={cx} cy={cy + 16} rx={16} ry={6} fill="rgba(0,0,0,0.5)" />
-                <circle
-                  cx={cx}
-                  cy={cy + 6}
-                  r={15}
-                  fill={
-                    activeRule.outputs[0].pigmentCharacteristic === "VIOLET"
-                      ? "url(#sphere-violet)"
-                      : activeRule.outputs[0].pigmentCharacteristic === "RED_OXIDE"
-                        ? "url(#sphere-red-oxide)"
-                        : activeRule.outputs[0].pigmentCharacteristic === "BLUE_GREEN"
-                          ? "url(#sphere-blue-greenish)"
-                          : activeRule.outputs[0].pigmentCharacteristic === "RED_BLUE"
-                            ? "url(#sphere-blue-redish)"
-                            : "url(#sphere-yellow-greenish)"
-                  }
-                  stroke="#ffffff"
-                  strokeWidth={1.5}
+              {/* Letras F, A e V da arte: reproduzidas sem interpretação */}
+              {detailed &&
+                art.letters.map((letter) => {
+                  const at = polarToCartesian(
+                    CX,
+                    CY,
+                    RADIUS * letter.distance,
+                    sector.center + letter.offset,
+                  );
+                  return (
+                    <text
+                      key={letter.glyph + letter.distance}
+                      x={at.x}
+                      y={at.y}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      transform={`rotate(${textRotation(sector.center, "along")} ${at.x} ${at.y})`}
+                      className="compass-label-letter"
+                    >
+                      {letter.glyph}
+                    </text>
+                  );
+                })}
+              {detailed && art.arc && (
+                <path
+                  d={(() => {
+                    const from = polarToCartesian(
+                      CX,
+                      CY,
+                      RADIUS * art.arc.from,
+                      sector.center + art.arc.offset,
+                    );
+                    const to = polarToCartesian(
+                      CX,
+                      CY,
+                      RADIUS * art.arc.to,
+                      sector.center + art.arc.offset,
+                    );
+                    return `M ${from.x.toFixed(1)} ${from.y.toFixed(1)} Q ${((from.x + to.x) / 2 + 14).toFixed(1)} ${((from.y + to.y) / 2).toFixed(1)} ${to.x.toFixed(1)} ${to.y.toFixed(1)}`;
+                  })()}
+                  fill="none"
+                  stroke={artInk}
+                  strokeWidth={3}
                 />
-                <ellipse
-                  cx={cx - 5}
-                  cy={cy + 1}
-                  rx={4}
-                  ry={2.5}
-                  transform={`rotate(-35, ${cx - 5}, ${cy + 1})`}
-                  fill="rgba(255,255,255,0.9)"
+              )}
+            </g>
+          );
+        })}
+
+        {/* Oito setas curtas partindo do pivô, uma por subtom */}
+        <g pointerEvents="none">
+          {compassSectors
+            .filter((sector) => sector.kind === "DIRECTION")
+            .map((sector) => {
+              const from = polarToCartesian(
+                CX,
+                CY,
+                RADIUS * compassRatios.arrow.from,
+                sector.center,
+              );
+              const to = polarToCartesian(
+                CX,
+                CY,
+                RADIUS * compassRatios.arrow.to,
+                sector.center,
+              );
+              return (
+                <line
+                  key={`arrow-${sector.index}`}
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke="#141a21"
+                  strokeWidth={4}
+                  markerEnd={`url(#arrow-${uid})`}
                 />
-                <text x={cx} y={cy + 34} textAnchor="middle" fill="#94a3b8" fontSize="7.5" fontWeight="800">
-                  CORTA COM:
-                </text>
-                <text x={cx} y={cy + 46} textAnchor="middle" fill="#f8fafc" fontSize="9" fontWeight="800">
-                  {pigmentLabels[activeRule.outputs[0].pigmentCharacteristic]}
-                </text>
-              </g>
-            )}
-
-            {/* Ângulo em Graus */}
-            <text x={cx} y={cy + 66} textAnchor="middle" fill="#64748b" fontSize="8" fontWeight="700">
-              {activeAngle.toFixed(1)}°
-            </text>
-          </g>
-        )}
-
-        {/* 8. Agulha Mecanizada Rotativa de Alta Precisão */}
-        <g
-          className="compass-needle-assembly"
-          style={{
-            transform: `rotate(${activeAngle}deg)`,
-            transformOrigin: `${cx}px ${cy}px`,
-            transition: isDragging ? "none" : "transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)",
-          }}
-        >
-          {/* Ponteiro Norte / Direção Ativa (Ponta Dourada/Branca) */}
-          <path
-            d={`M${cx - 5} ${cy - 88} L${cx} ${cy - 150} L${cx + 5} ${cy - 88} Z`}
-            fill="url(#needle-gold)"
-            filter="url(#glow-highlight)"
-          />
-          <path d={`M${cx} ${cy - 150} L${cx + 5} ${cy - 88} L${cx} ${cy - 88} Z`} fill="#a16207" />
-
-          {/* Mira Circular na Esfera Alvo */}
-          <circle cx={cx} cy={cy - 158} r={compact ? 19 : 25} fill="none" stroke="#facc15" strokeWidth={2} strokeDasharray="6 4" opacity={0.8} />
-
-          {/* Contra-peso Sul (Ponteiro Oposto Curto) */}
-          <path d={`M${cx - 4} ${cy + 88} L${cx} ${cy + 110} L${cx + 4} ${cy + 88} Z`} fill="url(#needle-light)" />
-          <path d={`M${cx} ${cy + 110} L${cx + 4} ${cy + 88} L${cx} ${cy + 88} Z`} fill="#475569" />
+              );
+            })}
         </g>
 
-        {/* 9. Pino Central Usinado / Capô de Rolamento */}
-        <circle cx={cx} cy={cy} r={18} fill="url(#bezel-metal)" stroke="#475569" strokeWidth={2} filter="url(#dial-shadow)" />
-        <circle cx={cx} cy={cy} r={12} fill="#090d16" stroke="#facc15" strokeWidth={1.5} />
-        <circle cx={cx - 3} cy={cy - 3} r={3} fill="rgba(255,255,255,0.8)" />
+        {/* Pivô preto pequeno, desenhado antes do destaque de seleção */}
+        <g pointerEvents="none">
+          <circle cx={CX} cy={CY} r={L.pivot} fill={artPivot.fill} />
+          <circle
+            cx={CX - L.pivot * 0.32}
+            cy={CY - L.pivot * 0.34}
+            r={L.pivot * 0.11}
+            fill={artPivot.highlight}
+          />
+        </g>
+
+        {/* Áreas de seleção e destaque discreto do setor ativo */}
+        {compassSectors.map((sector) => {
+          const active = activeSector?.index === sector.index;
+          return (
+            <path
+              key={`hit-${sector.index}`}
+              d={wedgePath(CX, CY, RADIUS, sector.start, sector.end)}
+              className={`compass-hit ${active ? "active" : ""}`}
+              role="img"
+              aria-label={
+                sector.kind === "TONE"
+                  ? `Tom ${toneLabels[sector.mainTone]}`
+                  : `${toneLabels[sector.mainTone]} ${directionLabels[sector.direction!].toLowerCase()}`
+              }
+            />
+          );
+        })}
+        {activeSector && (
+          <path
+            d={annularSectorPath(
+              CX,
+              CY,
+              L.pivot * 0.6,
+              RADIUS,
+              activeSector.start,
+              activeSector.end,
+            )}
+            className="compass-active-outline"
+            pointerEvents="none"
+          />
+        )}
       </svg>
 
-      {/* Alternador de Vista (Frente / Ângulo) quando fornecido */}
-      {!compact && onViewModeChange && (
-        <div className="compass-viewmode-bar">
-          <button
-            type="button"
-            className={`viewmode-btn ${viewMode === "ANGLE" ? "active" : ""}`}
-            onClick={() => onViewModeChange("ANGLE")}
-            title="Primeiro Ângulo (Flop) — Sempre avaliado primeiro na chapa com pigmentos sólidos."
-          >
-            <span className="mode-badge">1º PASSO</span>
-            <span className="mode-title">Ângulo (Flop)</span>
-          </button>
-          <button
-            type="button"
-            className={`viewmode-btn ${viewMode === "FRONT" ? "active" : ""}`}
-            onClick={() => onViewModeChange("FRONT")}
-            title="Segunda Frente (Face) — Avaliada somente após o ângulo fechar. Alumínio e pérola fecham a frente."
-          >
-            <span className="mode-badge">2º PASSO</span>
-            <span className="mode-title">Frente (Face)</span>
-          </button>
-        </div>
-      )}
+      <p className="compass-live" aria-live="polite">
+        {summary}
+      </p>
     </div>
   );
 }
-
