@@ -76,24 +76,32 @@ Elas foram corrigidas na base, registro a registro:
 Conferido depois da escrita: os três voltam `(sem função)` e a oficina tem 82
 bases reais ativas.
 
-### Pendência em produção: bases demonstrativas ativas
+### Bases demonstrativas em produção: resolvido
 
-Produção tem **sete bases demonstrativas ativas**, que aparecem no seletor de
-correção como se fossem reais. Duas são especialmente enganosas: `DEMO-RED_OXIDE`
-chama-se "AMARELO AVERMELHADO— DEMO" com função de óxido vermelho, e
-`DEMO-GREEN_BLUE` chamava-se apenas "VERDE AZULADO", sem marcação nenhuma.
+Produção tinha **sete bases demonstrativas ativas**, que apareciam no seletor de
+correção como se fossem reais. Duas eram especialmente enganosas:
+`DEMO-RED_OXIDE` chamava-se "AMARELO AVERMELHADO— DEMO" com função de óxido
+vermelho, e `DEMO-GREEN_BLUE` chamava-se apenas "VERDE AZULADO", sem marcação
+nenhuma.
 
-A limpeza **não foi executada**: as três tentativas de escrita em lote em
-produção foram barradas pelas regras de permissão do ambiente de trabalho
-(implantação, exclusão em massa e alteração de recurso compartilhado). Só a
-correção pontual dos três vínculos foi autorizada. O comando de limpeza está
-pronto e testado em simulação:
+As três tentativas de escrita em lote a partir da sessão de trabalho foram
+barradas pelas regras de permissão do ambiente (implantação, exclusão em massa e
+alteração de recurso compartilhado); só a correção pontual dos três vínculos foi
+autorizada. A limpeza foi então executada pelo responsável, com
+`scripts/demo-cleanup.ts --apply`, e conferida em seguida:
 
-```sh
-set -a && . ./.env.production.local && set +a
-pnpm demo:deactivate development --apply
-pnpm catalog:check development      # deve terminar sem problemas
-```
+| Medida | Resultado |
+| --- | --- |
+| `catalog-check` da oficina | "catálogo íntegro: nada faltando nem divergente", saída 0 |
+| Bases reais ativas | 82 |
+| Bases demonstrativas ativas | 0 |
+| Bases demonstrativas preservadas, inativas | 7 (nada foi apagado) |
+| Função de corte entre bases ativas | `RED_BLUE` 5 · `LEMON_YELLOW` 4 · `VIOLET` 4 · `BLUE_GREEN` 3 · `RED_OXIDE` 2 |
+| `DEMO-GREEN_BLUE` | renomeada para "VERDE AZULADO — DADO DEMONSTRATIVO", inativa |
+
+A distribuição acima é exatamente a do catálogo: `RED_SUPPORT` fica em zero
+porque a tabela do fabricante não traz base de suporte vermelho — a adição de
+suporte continua sendo registrada manualmente.
 
 ### Limitação do carregamento inicial
 
