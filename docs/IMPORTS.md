@@ -20,6 +20,8 @@ DEMO,Treinamento,DEMO-VIOLET,GENERAL,,,,,Sem propriedades calibradas,DADO DEMONS
 
 `view`: ANGLE, FRONT ou GENERAL. Fonte e referência obrigatórias para todo comportamento.
 
+O consultor de comportamento lê `hueCharacteristic`, `lightnessEffect`, `cleanlinessEffect` e `particleEffect` com o vocabulário de `domain/colorimetry/behavior-vocabulary.ts`; `notes` é exibido, mas não entra na correspondência. Para que um registro importado seja encontrado, o comportamento de cada vista deve estar na sua linha FRONT ou ANGLE (GENERAL não comprova vista) e usar termos do vocabulário ("Azulado leitoso", "Amarelado sujo"). Termo desconhecido não é inferido: a base aparece como "sem informação" para aquela condição.
+
 A tabela "Características das Cores Básicas" (Sherwin-Williams / Lazzuril) já está transcrita em `domain/colorimetry/lazzuril-catalog.ts` e é carregada por `services/lazzuril-seed.ts`, que faz upsert por organização + fabricante + linha + código — repetir a carga não duplica nem sobrescreve edições de comportamento. O poliéster usa FRONT e ANGLE separados; o poliuretano usa GENERAL, porque a fonte traz uma única coluna de característica.
 
 A coluna `characteristic` do pigmento é **função de corte do método**, não o comportamento óptico da tabela: só é preenchida quando a base é de fato aquele pigmento corretivo. Um vermelho de ângulo azulado não vira `RED_BLUE` (azul avermelhado), e "amarelo óxido" não tem identificador no domínio. `tests/lazzuril-mapping.test.ts` protege essa distinção.

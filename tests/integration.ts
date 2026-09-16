@@ -21,6 +21,10 @@ import {
   setUserStatus,
 } from "../services/admin";
 import { getRules, getWorkspace } from "../repositories/workspace";
+import { seedLazzurilBases } from "../services/lazzuril-seed";
+import { queryPigmentsByBehavior } from "../services/behavior-query";
+import { interpretBehaviorQuestion } from "../domain/colorimetry/behavior-interpreter";
+import { emptyCriteria } from "../domain/colorimetry/behavior-criteria";
 import { formulaInput } from "./fixtures";
 const prefix = `integration-${randomUUID()}`;
 const orgA = `${prefix}-a`,
@@ -45,6 +49,7 @@ await db.user.createMany({
     { ...other, email: `${prefix}-b@example.test` },
   ],
 });
+const whereTest = { organizationId: { in: [orgA, orgB] } };
 let assertions = 0;
 async function rejects(fn: () => Promise<unknown>) {
   await assert.rejects(fn);
@@ -387,8 +392,161 @@ try {
   assertions++;
   await limitAction(actor, now + 61000);
   assertions++;
+  // Consultor de comportamento: leitura da oficina da sessão, sem gravação.
+  const testBehaviors = (front: string, angle: string) => ({
+    create: [
+      { view: "FRONT", hueCharacteristic: front, source: "TEST", sourceReference: "TEST" },
+      { view: "ANGLE", hueCharacteristic: angle, source: "TEST", sourceReference: "TEST" },
+    ],
+  });
+  const testPigment = (organizationId: string, code: string, extra = {}) =>
+    db.pigment.create({
+      data: {
+        organizationId,
+        manufacturer: "TEST",
+        productLine: "TEST",
+        code,
+        name: `TEST ${code}`,
+        systemType: "TEST",
+        family: "TEST",
+        behaviors: testBehaviors("Amarelado", "Azulado"),
+        ...extra,
+      },
+    });
+  await seedLazzurilBases(orgA);
+  await testPigment(orgA, "TEST-INATIVA", { active: false });
+  await testPigment(orgA, "TEST-DEMO", { isDemo: true });
+  await testPigment(orgB, "TEST-OUTRA-OFICINA");
+  const video = interpretBehaviorQuestion(
+    "Preciso de um pigmento que amarele a frente e deixe o ângulo azul",
+  );
+  const notMilky = interpretBehaviorQuestion(
+    "frente amarela e ângulo azul sem efeito leitoso",
+  );
+  assert.equal(video.status, "READY");
+  assert.equal(notMilky.status, "READY");
+  assertions += 2;
+  const ask = (who: Actor, criteria: unknown, filters = {}) =>
+    queryPigmentsByBehavior(who, { criteria, filters });
+  const allCodes = (r: Awaited<ReturnType<typeof ask>>) =>
+    [...r.complete, ...r.partial, ...r.generalOnly].map((m) => m.pigment.code);
+  const micronizado = await db.pigment.findFirstOrThrow({
+    where: { organizationId: orgA, code: "HS 740 / LM 440" },
+    include: { behaviors: true },
+  });
+  assert.deepEqual(
+    (await ask(actor, notMilky.criteria)).complete.map((m) => m.pigment.code),
+    [],
+  );
+  assertions++;
+  // Edição local da oficina: o consultor lê o banco, não a constante do seed.
+  await savePigment(actor, {
+    id: micronizado.id,
+    manufacturer: micronizado.manufacturer,
+    productLine: micronizado.productLine,
+    code: micronizado.code,
+    name: micronizado.name,
+    systemType: micronizado.systemType,
+    family: micronizado.family,
+    description: micronizado.description,
+    behaviors: [
+      { view: "FRONT", hueCharacteristic: "Amarelado sujo", source: "TEST", sourceReference: "TEST" },
+      { view: "ANGLE", hueCharacteristic: "Azulado limpo", source: "TEST", sourceReference: "TEST edição local" },
+    ],
+    reason: "TEST edição local do comportamento",
+  });
+  await seedLazzurilBases(orgA); // repetir a carga não sobrescreve a edição
+  const snapshot = async () =>
+    JSON.stringify([
+      await db.auditLog.count({ where: whereTest }),
+      await db.pigment.findMany({
+        where: whereTest,
+        select: { id: true, updatedAt: true, active: true, isDemo: true },
+        orderBy: { id: "asc" },
+      }),
+      await db.pigmentBehavior.count({ where: { pigment: whereTest } }),
+      await db.correctionAddition.count(),
+      await db.adjustmentIteration.count(),
+      await db.adjustmentSession.count({ where: whereTest }),
+      await db.formula.count({ where: whereTest }),
+      await db.calibrationCoefficient.count({ where: whereTest }),
+    ]);
+  const before = await snapshot();
+
+  const found = await ask(professional, video.criteria);
+  assert.deepEqual(found.complete.map((m) => m.pigment.code), ["HS 740 / LM 440"]);
+  assertions++;
+  const retrieved = found.complete[0].pigment;
+  assert.equal(retrieved.name, "Branco Micronizado");
+  assert.deepEqual(
+    retrieved.behaviors.map((b) => [b.view, b.hueCharacteristic]).sort(),
+    [
+      ["ANGLE", "Azulado limpo"],
+      ["FRONT", "Amarelado sujo"],
+    ],
+  );
+  assertions += 2;
+  assert.equal(allCodes(found).includes("TEST-INATIVA"), false);
+  assert.equal(allCodes(found).includes("TEST-DEMO"), false);
+  assert.equal(allCodes(found).includes("TEST-OUTRA-OFICINA"), false);
+  assert.equal(found.demoExcluded, 1);
+  assertions += 4;
+  assert.deepEqual(
+    (await ask(actor, notMilky.criteria)).complete.map((m) => m.pigment.code),
+    ["HS 740 / LM 440"],
+  );
+  assertions++;
+  const withDemo = await ask(actor, video.criteria, { includeDemo: true });
+  assert.deepEqual(
+    withDemo.complete.map((m) => [m.pigment.code, m.pigment.isDemo]),
+    [
+      ["HS 740 / LM 440", false],
+      ["TEST-DEMO", true],
+    ],
+  );
+  assertions++;
+  assert.deepEqual(
+    (await ask(other, video.criteria)).complete.map((m) => m.pigment.code),
+    ["TEST-OUTRA-OFICINA"],
+  );
+  assertions++;
+  const commercial = await ask(actor, video.criteria, {
+    manufacturer: "Sherwin-Williams",
+    productLine: "Lazzuril Base Poliéster",
+    systemType: "Poliéster",
+  });
+  assert.deepEqual(commercial.complete.map((m) => m.pigment.code), ["HS 740 / LM 440"]);
+  assert.equal(
+    commercial.partial.every((m) => m.pigment.productLine === "Lazzuril Base Poliéster"),
+    true,
+  );
+  assertions += 2;
+  const polyurethane = await ask(actor, video.criteria, { systemType: "Poliuretano" });
+  assert.equal(polyurethane.complete.length, 0);
+  assert.equal(polyurethane.considered, 22);
+  assertions += 2;
+  assert.equal(
+    (await ask(actor, video.criteria, { manufacturer: "TEST sem cadastro" })).considered,
+    0,
+  );
+  assert.equal(
+    (await ask(actor, video.criteria, { manufacturer: "Sherwin-Williams", productLine: "TEST" }))
+      .considered,
+    0,
+  );
+  assertions += 2;
+  await rejects(() => ask(actor, emptyCriteria()));
+  const conflicting = emptyCriteria();
+  conflicting.FRONT.require = ["CLEAN", "DIRTY"];
+  await rejects(() => ask(actor, conflicting));
+  await rejects(() => ask(actor, { FRONT: { hue: "PURPLE" } }));
+  const payload = JSON.stringify(found);
+  assert.equal(/dose|gramsPer100g|suggestedAmount|addedAmount/i.test(payload), false);
+  assertions++;
+  assert.equal(await snapshot(), before);
+  assertions++;
   console.log(
-    `Integração PostgreSQL: ${assertions} verificações passaram (massa, concorrência, versões, aprovação, RBAC e isolamento).`,
+    `Integração PostgreSQL: ${assertions} verificações passaram (massa, concorrência, versões, aprovação, RBAC, isolamento e consultor de comportamento).`,
   );
 } finally {
   // Exclusão somente das organizações efêmeras criadas por este teste.

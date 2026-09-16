@@ -163,8 +163,28 @@ Com a primeira chapa seca sob iluminação controlada (luz do sol ou luz de cabi
 |---|---|
 | **Bússola da Colorimetria** (`/compass`) | Disco com doze posições: 4 tons fundamentais e 8 direções de subtom. Selecione clicando, arrastando ou pelo teclado; o painel mostra os pigmentos de corte da regra vigente. O seletor Ângulo/Frente registra a vista avaliada e não muda a regra. |
 | **Banco de Cores** (`/bank`) | Acervo de todas as fórmulas já acertadas e aprovadas pela oficina, com pesquisa rápida por código, cor ou modelo. |
-| **Biblioteca de Pigmentos** (`/pigments`) | Lista completa de bases, tipos de pigmento e fabricantes cadastrados. |
+| **Biblioteca de Pigmentos** (`/pigments`) | Consultor de comportamento e lista completa de bases, tipos de pigmento e fabricantes cadastrados, com frente e ângulo. |
 | **Histórico de Ajustes** (`/history`) | Rastreabilidade total de cada iteração, massa consumida e auditoria de pesagem. |
+
+### 9.1 Consultor de comportamento: procurar uma base pelo efeito na frente e no ângulo
+
+Use quando você sabe o **efeito que procura** e quer saber qual base da tabela o documenta. Acesse em **Biblioteca de Pigmentos** ou pelo botão **Consultar bases por comportamento** da bússola.
+
+1. Escreva a pergunta, por exemplo: *"Preciso de um pigmento que amarele a frente e deixe o ângulo azul"*, e toque em **Consultar**. O exemplo abaixo do campo preenche essa pergunta.
+2. Confira a **interpretação**: `Frente: amarelar · Ângulo: azular`. Se algo estiver errado, abra **Ajustar critérios sem reescrever a pergunta** e escolha matiz, tendência, limpeza, luminosidade, efeito leitoso e, em **Mais critérios**, transparência, partículas e matizes a evitar.
+3. Restrinja, se quiser, **fabricante, linha e sistema**. Bases inativas nunca entram; dados demonstrativos só entram se você marcar a opção, e aparecem identificados.
+4. Leia os resultados:
+   - **Correspondências completas**: a mesma base registra tudo o que foi pedido, cada condição na sua vista. Aparecem nome, código, fabricante, linha, sistema, a descrição completa de frente e de ângulo, a fonte e o motivo.
+   - **Correspondências parciais**: atendem só uma parte; cada condição mostra *Atende*, *Não atende*, *Só tendência*, *Sem informação* ou *Divergente*.
+   - **Informação insuficiente**: bases só com comportamento geral (poliuretano). Um registro geral não separa frente e ângulo e não comprova nenhuma das vistas.
+
+No catálogo atual, o exemplo retorna **Branco Micronizado — HS 740 / LM 440**, frente *Amarelado sujo*, ângulo *Azulado leitoso*. Se você pedir frente **limpa** ou ângulo **sem efeito leitoso**, essa base passa para as parciais, com o motivo.
+
+Cuidados:
+
+- Se a frase descreve **como a tinta está** ("minha tinta está amarela de frente"), o sistema pede confirmação antes de buscar. Para corrigir um desvio observado, use a **bússola**.
+- Se um comportamento vier sem vista ("quero um pigmento amarelo"), escolha *Aplicar na frente* ou *Aplicar no ângulo*.
+- A consulta é **qualitativa e documental**: não calcula dosagem, não registra adição, não altera o ajuste e não garante o resultado físico da mistura.
 
 ---
 

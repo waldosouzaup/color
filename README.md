@@ -97,6 +97,8 @@ O cenário E2E efetua login, cria uma fórmula de 500 g, seleciona metálica, re
 
 O motor independente está em `domain/colorimetry/`. Seus testes cobrem as oito regras, combinações inválidas, alternativas/combinações, pesos acumulados e matemática de dosagem. Detalhes em [COLORIMETRY_DOMAIN.md](docs/COLORIMETRY_DOMAIN.md).
 
+A consulta qualitativa de bases por comportamento na frente e no ângulo ("amarele a frente e deixe o ângulo azul") fica na Biblioteca de Pigmentos. É determinística, somente leitura e separada das oito regras e da dosagem: `domain/colorimetry/behavior-*.ts`, `services/behavior-query.ts` e [ADR-005](docs/adr/ADR-005-behavior-query.md).
+
 A geometria da bússola fica em `domain/compass/`, também sem React: doze setores de 30°, quatro tons fundamentais e oito direções. O contrato visual, as medidas tiradas da referência e as divergências entre a arte impressa e a matriz estão em [BUSSOLA_VISUAL.md](docs/BUSSOLA_VISUAL.md).
 
 Recomendação quantitativa exige coeficiente VERIFIED, ativo, aprovado, não demonstrativo e correspondente à base, regra, sistema, tipo de tinta, organização e severidade. Sem ele, **DOSAGEM NÃO CALIBRADA** e adição manual. O exemplo 0,20 g / 100 g aparece apenas como fixture matemática. Não representa um coeficiente real.
@@ -122,6 +124,7 @@ O botão Relatório abre a impressão do navegador com uma folha própria, sem a
 ## Limitações explícitas
 
 - Motor de efeito documenta frente, ângulo, partículas, alumínio e pérola; não gera regras quantitativas não comprovadas.
+- O consultor de comportamento entende um vocabulário explícito em português (matizes, limpo/sujo, claro/escuro, leitoso, transparente, partículas). Frases fora dele pedem ajuste pelos controles; não há LLM. A correspondência é documental e não garante o resultado físico da mistura.
 - Sem leitura colorimétrica automática de foto, espectrofotômetro virtual, IA de dosagem, scraping ou API falsa de fabricante.
 - Links oficiais configuráveis abrem em outra aba; `FormulaProvider`/`ManualFormulaProvider` são contratos para integração autorizada futura.
 - Importadores CSV e PDF programático são futuros; contratos em [IMPORTS.md](docs/IMPORTS.md).

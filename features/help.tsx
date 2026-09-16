@@ -232,6 +232,12 @@ interface FaqItem {
 
 const faqData: FaqItem[] = [
   {
+    question: "Qual a diferença entre consultar comportamento, diagnosticar na bússola e calcular dose?",
+    answer:
+      "O consultor da Biblioteca de Pigmentos parte do efeito que você procura (por exemplo, amarelar a frente e deixar o ângulo azul) e mostra as bases cujos comportamentos cadastrados documentam isso, com fonte. A bússola parte do desvio observado na chapa e indica a função de corte da regra do método. A dose só existe com coeficiente calibrado e verificado; nenhuma das duas consultas calcula quantidade ou registra adição.",
+    tag: "Consultas",
+  },
+  {
     question: "Por que a correção SEMPRE deve começar pelo ângulo e nunca pela frente?",
     answer:
       "Os pigmentos sólidos governam a cor no ângulo de visão rasante (45° e 110° — Flop). Se você tentar acertar a frente (Face 90°) primeiro adicionando alumínio, pérola ou pigmento puro, desestabilizará o ângulo de forma irreversível. A experiência prática do Mestre demonstra que quando o ângulo fecha com perfeição, a frente quase sempre fecha automaticamente ou exige apenas micro-ajustes de acabamento.",
@@ -708,8 +714,9 @@ export function HelpView() {
               </div>
               <h4>Biblioteca de Pigmentos (/pigments)</h4>
               <p>
-                Tabela de todas as bases e pigmentos disponíveis na oficina, com suas
-                propriedades de cobertura e transparência.
+                Consultor de comportamento (ex.: amarelar a frente e deixar o ângulo
+                azul) e tabela das bases da oficina com frente, ângulo e fonte. Consulta
+                qualitativa: não calcula dosagem.
               </p>
               <Link href="/pigments" className="button secondary small">
                 Ver Pigmentos <ArrowRight size={14} />

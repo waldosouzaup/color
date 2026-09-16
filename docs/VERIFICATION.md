@@ -1,5 +1,82 @@
 # Verificação da implementação
 
+## Execução de 16 de setembro de 2026 — consultor de comportamento
+
+Consulta de bases por comportamento na frente e no ângulo, pedida no vídeo do
+usuário ([REQUISITOS_VIDEO_USUARIO.md](REQUISITOS_VIDEO_USUARIO.md)). Contrato em
+[COLORIMETRY_DOMAIN.md](COLORIMETRY_DOMAIN.md#consulta-qualitativa-de-comportamento)
+e decisão em [ADR-005](adr/ADR-005-behavior-query.md).
+
+### Onde isso foi executado
+
+A porta 3004 continuava ocupada pelo servidor de desenvolvimento apontado para o
+**Supabase de produção**. Nada foi executado contra ele. Integração, navegador e
+build usaram PostgreSQL local (`127.0.0.1:5433`, `.env.local-db`); navegador e
+build rodaram numa cópia isolada do projeto em `http://localhost:3005` com
+`next dev --webpack`. Nenhum seed ou migração foi executado nesta tarefa: o
+banco local já tinha o catálogo (82 bases reais e 6 demonstrativas).
+
+| Comando | Resultado |
+| --- | --- |
+| `pnpm lint` | Passou, sem avisos |
+| `pnpm typecheck` | Passou |
+| `pnpm test` | 117 testes em 8 arquivos passaram (40 novos: interpretação e correspondência) |
+| `pnpm test:db` (banco local) | 63 verificações passaram (24 novas do consultor) |
+| `pnpm build` (cópia isolada) | Build de produção concluído |
+| `pnpm test:e2e` (cópia isolada, `--timeout=300000`) | 16 cenários passaram (5 novos do consultor) |
+
+### O que os testes comprovam
+
+- As formulações do vídeo ("amarele a frente e deixe o ângulo azul", "amarelar a
+  frente e azular o ângulo", "frente amarelada e ângulo azulado", "quero o ângulo
+  azul e a frente amarela", sem acento e em caixa alta) viram
+  `Frente: amarelar · Ângulo: azular`; a frase invertida inverte as vistas.
+- A pergunta do vídeo recupera, no catálogo e no banco, **Branco Micronizado —
+  HS 740 / LM 440**, frente "Amarelado sujo", ângulo "Azulado leitoso", fonte
+  Sherwin-Williams / Lazzuril (`05.jpeg`). Com código trocado a mesma base volta;
+  com a frente editada ela sai e uma base fictícia com os mesmos comportamentos
+  entra. Os módulos do consultor não contêm o código nem o nome da base.
+- "Frente amarelo esverdeado" (resposta do chatbot) não é correspondência completa;
+  "frente limpa" e "ângulo sem efeito leitoso" deslocam a base para as parciais com
+  o motivo.
+- Condição de frente não é satisfeita pelo ângulo; GENERAL não comprova vista;
+  vista ausente, descrição vazia e qualificador não escrito ficam "sem
+  informação"; registros que discordam ficam "divergente".
+- No banco: outra oficina não aparece, base inativa não entra, demonstrativa fica
+  fora por padrão e identificada quando incluída, filtros de fabricante, linha e
+  sistema restringem a consulta, edição local de comportamento é usada e
+  sobrevive a nova carga do catálogo. Auditoria, pigmentos, comportamentos,
+  sessões, iterações, adições, fórmulas e coeficientes ficam idênticos antes e
+  depois das consultas; a resposta não tem campo de dose.
+- No navegador: pergunta do vídeo com código, comportamentos e fonte; exemplo
+  clicável; ajuste de "Limpeza" sem reescrever; observação da tinta pede
+  confirmação e oferece a bússola; comportamento sem vista oferece "Aplicar na
+  frente/no ângulo"; atalho da bússola abre o consultor com foco no campo; sem
+  rolagem horizontal em 375 px.
+
+Evidência visual em `test-results/consultor/` (diretório ignorado): resultado,
+parcial "limpo" e observação em 1440 e 375 px, temas claro e escuro, e o
+cabeçalho da bússola com o atalho. Nenhum erro de console nessas capturas. Por
+teclado, a ordem é campo → exemplo → ajuste de critérios → filtros, com contorno
+de foco de 2 px, e Enter no exemplo executa a consulta.
+
+### Ajuste na suíte de navegador
+
+A primeira execução completa falhou em dois cenários de `workflow.spec.ts` com
+"Muitas tentativas de entrada": `/sign-in/email` aceita cinco tentativas por
+minuto e o novo arquivo acrescentava mais um login. O limite da aplicação não foi
+alterado. Os cenários que autenticam pela API (bússola, catálogo e consultor)
+passaram a compartilhar uma sessão em `tests/e2e/admin-session.ts`, conferida no
+servidor antes do reuso. Na execução seguinte os 16 cenários passaram.
+
+### Limitações desta execução
+
+- `docs/MANUAL_DO_USUARIO.md` foi atualizado; o HTML e o PDF do manual não foram
+  regenerados (`scripts/manual-pdf.sh`).
+- `pnpm test:supabase` e `pnpm test:e2e:production` não foram executados; nada
+  foi apontado para produção.
+- O consultor não foi publicado nem verificado no banco de produção.
+
 ## Execução de 16 de setembro de 2026 — catálogo Lazzuril / Sherwin-Williams
 
 Conferência da tabela "Características das Cores Básicas" (`05.jpeg`) contra

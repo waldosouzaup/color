@@ -1,33 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { adminStorageState, ensureAdminSession } from "./admin-session";
 
 /**
  * A tabela "Características das Cores Básicas" precisa ser consultável dentro
  * do sistema: busca por código, filtros por sistema e família, e o
  * comportamento separado de frente e ângulo visível na listagem.
  */
-const storageState = path.join(tmpdir(), "pigments-e2e-auth.json");
-const base = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+test.beforeAll(async ({ playwright }) => ensureAdminSession(playwright));
 
-test.beforeAll(async ({ playwright }) => {
-  const api = await playwright.request.newContext({
-    baseURL: base,
-    storageState: undefined,
-  });
-  const response = await api.post("/api/auth/sign-in/email", {
-    headers: { Origin: base, "Content-Type": "application/json" },
-    data: {
-      email: process.env.SEED_ADMIN_EMAIL,
-      password: process.env.SEED_ADMIN_PASSWORD,
-    },
-  });
-  expect(response.ok(), `sign-in retornou ${response.status()}`).toBe(true);
-  await api.storageState({ path: storageState });
-  await api.dispose();
-});
-
-test.use({ storageState });
+test.use({ storageState: adminStorageState });
 
 test("catálogo: busca por código traz a base com frente e ângulo", async ({
   page,

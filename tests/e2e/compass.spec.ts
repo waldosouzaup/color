@@ -1,37 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { adminStorageState, ensureAdminSession } from "./admin-session";
 
 /**
  * A sessão vem da API de autenticação, não do formulário: o login pela
  * interface já é coberto em `workflow.spec.ts` e repetí-lo aqui consumiria o
  * limitador de tentativas de entrada.
  */
-const storageState = path.join(tmpdir(), "compass-e2e-auth.json");
+test.beforeAll(async ({ playwright }) => ensureAdminSession(playwright));
 
-// `baseURL` é fixture de teste e não pode ser lida em beforeAll; o endereço vem
-// da mesma variável que a configuração do Playwright usa.
-const base = process.env.BETTER_AUTH_URL || "http://localhost:3000";
-
-test.beforeAll(async ({ playwright }) => {
-  // `storageState: undefined` evita herdar o arquivo que este hook ainda vai criar.
-  const api = await playwright.request.newContext({
-    baseURL: base,
-    storageState: undefined,
-  });
-  const response = await api.post("/api/auth/sign-in/email", {
-    headers: { Origin: base, "Content-Type": "application/json" },
-    data: {
-      email: process.env.SEED_ADMIN_EMAIL,
-      password: process.env.SEED_ADMIN_PASSWORD,
-    },
-  });
-  expect(response.ok(), `sign-in retornou ${response.status()}`).toBe(true);
-  await api.storageState({ path: storageState });
-  await api.dispose();
-});
-
-test.use({ storageState });
+test.use({ storageState: adminStorageState });
 
 /** Ponto do disco no ângulo pedido, a 80% do raio (banda externa). */
 async function pointAt(page: Page, degrees: number, fraction = 0.8) {

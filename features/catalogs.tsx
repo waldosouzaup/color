@@ -24,6 +24,7 @@ import type { Workspace, Pigment } from "@/lib/client-types";
 import { mutation, action, paintLabels, formatDate } from "@/lib/client-api";
 import { characteristics } from "@/domain/colorimetry/types";
 import { pigmentLabels } from "@/domain/colorimetry/tones";
+import { BehaviorConsultant } from "./behavior-consultant";
 type Coefficient = Workspace["coefficients"][number];
 export function PigmentsView({
   workspace,
@@ -76,6 +77,8 @@ export function PigmentsView({
           </button>
         )}
       </Heading>
+      <BehaviorConsultant pigments={workspace.pigments} />
+      <h2 className="catalog-section-title">Catálogo de bases</h2>
       <div className="toolbar pigment-toolbar">
         <label className="search">
           <Search size={18} />

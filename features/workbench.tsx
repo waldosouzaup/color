@@ -368,6 +368,14 @@ function CompassView({ workspace }: { workspace: Workspace }) {
             <CircleHelp size={16} />
             Regras de Oposição & Contaminação
           </button>
+          <Link
+            href="/pigments?consultor=1#consultor"
+            className="button secondary sm"
+            title="Encontrar bases pelo comportamento documentado na frente e no ângulo"
+          >
+            <Search size={16} />
+            Consultar bases por comportamento
+          </Link>
         </div>
       </div>
 

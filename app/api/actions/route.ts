@@ -27,6 +27,7 @@ import { severities } from "@/domain/colorimetry/types";
 import { readJsonBody } from "@/lib/request-body";
 import { limitAction } from "@/services/rate-limit";
 import { resetUserPassword } from "@/services/account";
+import { queryPigmentsByBehavior } from "@/services/behavior-query";
 export async function POST(request: NextRequest) {
   try {
     const origin = request.headers.get("origin");
@@ -98,6 +99,9 @@ export async function POST(request: NextRequest) {
       }
       case "settings":
         result = await saveSettings(actor, data);
+        break;
+      case "behaviorQuery":
+        result = await queryPigmentsByBehavior(actor, data);
         break;
       case "diagnose": {
         const input = z

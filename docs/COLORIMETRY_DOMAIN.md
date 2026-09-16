@@ -33,7 +33,40 @@ Pesagem exige modo explícito. Para acumulado `100, 145, 162.50`, os incrementos
 
 Antes do diagnóstico inicial exige-se uma chapa. A classificação começa em `ANGLE`; após uma adição, exige-se nova chapa e registro da frente junto com a próxima classificação do ângulo. Aprovação exige confirmação e observações de ambas as vistas, sob iluminação registrada.
 
-O motor A resolve matiz. O motor B está limitado à documentação: comportamentos por vista, aparência das partículas e condições de aplicação. Não calcula alumínio, pérola, granulometria ou flop. Fotos apenas documentam as chapas; não há reconhecimento automático de cor.
+O motor A resolve matiz. O motor B está limitado à documentação: comportamentos por vista, aparência das partículas e condições de aplicação, e à **consulta qualitativa** desses comportamentos (seção seguinte). Não calcula alumínio, pérola, granulometria ou flop. Fotos apenas documentam as chapas; não há reconhecimento automático de cor.
+
+## Três perguntas diferentes
+
+| Pergunta do profissional | Ferramenta | Parte de | Entrega | Não faz |
+| --- | --- | --- | --- | --- |
+| "Minha tinta está amarela avermelhada no ângulo; o que corta?" | **Diagnóstico pela bússola** (motor A) | Tom e subtom **observados** na chapa | Regra vigente entre as oito e a função de corte (`characteristic`) | Não procura base por efeito desejado |
+| "Preciso de um pigmento que amarele a frente e deixe o ângulo azul" | **Consulta qualitativa de comportamento** (motor B) | Efeito **desejado** por vista | Bases cujos `PigmentBehavior` documentam as condições, com fonte | Não resolve regra, não indica dose, não grava nada |
+| "Quanto adiciono?" | **Cálculo de dosagem** | Coeficiente VERIFIED do contexto exato | Gramas, ou DOSAGEM NÃO CALIBRADA | Não é deduzido de nenhuma das anteriores |
+
+## Consulta qualitativa de comportamento
+
+Fica na Biblioteca de Pigmentos, com atalho na bússola. Responsabilidades separadas, todas determinísticas e sem serviço externo:
+
+1. **Vocabulário** (`behavior-vocabulary.ts`): léxico explícito de matizes (amarelo, azul, verde, vermelho, violeta, laranja, marrom, rosa, dourado, cinza, preto, branco) e qualificadores (limpo/sujo, claro/escuro, leitoso, transparente, partícula fina/graúda, brilho, partícula aparente). Normaliza acentos e caixa. O mesmo léxico lê a pergunta e os descritores cadastrados: o primeiro matiz de um descritor é o principal ("Azul esverdeado" é azul) e os seguintes são tendência.
+2. **Critérios** (`behavior-criteria.ts`): cada vista tem matiz principal, tendência, matizes a evitar, qualificadores exigidos e excluídos. É o contrato validado pelo servidor e o que os controles da tela editam.
+3. **Interpretação** (`behavior-interpreter.ts`): associa cada termo à vista pela estrutura da frase ("amarele **a frente**", "**frente** amarelada", "azulado **no ângulo**"), trata negação ("sem leitoso", "não pode ficar suja") e distingue pedido de observação ("minha tinta está amarela de frente"). Termo sem vista, matizes principais concorrentes, "ou" entre condições e observação pedem confirmação; nada é buscado em silêncio.
+4. **Correspondência** (`behavior-matcher.ts`) e **consulta** (`services/behavior-query.ts`): leitura escopada pela organização da sessão, somente bases ativas, filtros de fabricante, linha e sistema, demonstrativos fora por padrão e identificados quando incluídos.
+
+Regras de correspondência:
+
+- Todas as condições valem para a **mesma base**. Condição de frente só é conferida em registros `FRONT`; de ângulo, em `ANGLE`.
+- `GENERAL` nunca comprova vista. Uma base só com registro geral relacionado aparece à parte, como informação insuficiente.
+- Matiz pedido precisa ser o principal do descritor. Presente só como tendência ("Vermelho amarelado" para "amarelar") conta como parcial.
+- Qualificador exigido precisa estar escrito. Sem menção, o resultado é "sem informação", não "atende". O oposto registrado ("sujo" para "limpo") é "não atende".
+- Qualificador excluído ou matiz evitado é atendido quando o registro não o menciona; essa ausência, sozinha, não torna uma base parcial.
+- Registros da mesma vista que discordam, ou um registro que afirma opostos, são "divergente".
+- Completas primeiro, na ordem fabricante, linha e código. Parciais separadas, com cada condição explicada. Não há percentual de confiança.
+
+Os descritores considerados são matiz, luminosidade, limpeza e partículas. As observações livres do comportamento são exibidas, mas não entram na correspondência.
+
+Exemplo verificado: "amarelar a frente e deixar o ângulo azul" retorna, no catálogo atual, **Branco Micronizado — HS 740 / LM 440**, frente "Amarelado sujo", ângulo "Azulado leitoso", fonte Sherwin-Williams / Lazzuril (`05.jpeg`). O código não está fixado no consultor; a base aparece porque os dois registros correspondem. Pedir frente limpa ou ângulo sem efeito leitoso a desloca para as parciais.
+
+A consulta não altera `Pigment.characteristic`: uma base branca de ângulo azulado continua sem função de corte e não entra no formulário de adição. Correspondência documental não garante o resultado físico da mistura.
 
 ## Dosagem
 
