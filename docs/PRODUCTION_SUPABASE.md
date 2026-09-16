@@ -69,6 +69,18 @@ set -a && . ./.env.production.local && set +a
 pnpm catalog:check development
 ```
 
+### Sem o pnpm no PATH
+
+Este projeto fixa o gerenciador em `package.json`, mas a máquina pode não ter o binário disponível. Nesse caso, use o Corepack ou chame o `tsx` local direto — as duas formas dispensam instalação global:
+
+```sh
+corepack pnpm@10.33.4 exec tsx scripts/demo-cleanup.ts development --apply
+# ou
+node node_modules/tsx/dist/cli.mjs scripts/demo-cleanup.ts development --apply
+```
+
+O mesmo vale para `scripts/catalog-check.ts`. Para deixar o `pnpm` disponível de vez: `corepack enable` ou `npm install -g pnpm@10`.
+
 Repetir o bootstrap preserva a senha de um administrador existente na organização informada. O seed de desenvolvimento está bloqueado em produção. Não execute testes, migrate reset ou db:seed contra a base real.
 
 Após o bootstrap, retire PRODUCTION_ADMIN_PASSWORD das variáveis do runtime. Alteração de senha está em **Minha conta**. Um administrador pode redefinir a senha de outro usuário em Configurações, com revogação de sessões e auditoria. Envio/recuperação de senha por e-mail exige uma integração futura; não foi configurado um serviço de e-mail fictício.

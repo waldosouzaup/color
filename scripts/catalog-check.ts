@@ -125,8 +125,14 @@ for (const organization of organizations) {
       `bases demonstrativas ATIVAS (${demonstrativas.length})${emProducao ? " — defeito em produção" : " — aceitável fora de produção"}:`,
     );
     for (const d of demonstrativas) console.log(`  ⚠ ${d}`);
-    if (emProducao)
-      console.log("  corrija com: pnpm demo:deactivate <oficina> --apply");
+    if (emProducao) {
+      console.log(
+        `  corrija com: pnpm demo:deactivate ${organization.id} --apply`,
+      );
+      console.log(
+        `  sem pnpm no PATH: node node_modules/tsx/dist/cli.mjs scripts/demo-cleanup.ts ${organization.id} --apply`,
+      );
+    }
   }
   if (!problemas) console.log("catálogo íntegro: nada faltando nem divergente.");
 }
